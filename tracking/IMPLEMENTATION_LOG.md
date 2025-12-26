@@ -50,11 +50,40 @@
 3. **Precision**: 16-bit and 8-bit transforms produce consistent results
 
 ### Next Steps
-1. Add CMYK transform tests
-2. Add Lab/XYZ conversion tests
-3. Test with external ICC profiles (fetch script)
-4. Add rendering intent comparison tests
-5. Add fuzzing harnesses
+1. Add CMYK transform tests with external profiles
+2. Test with external ICC profiles (fetch script)
+3. Add fuzzing harnesses
+
+---
+
+## 2025-12-25: Extended Test Coverage
+
+### Added
+- `color_space_tests.rs` with 8 tests:
+  - CMYK profile loading support
+  - Lab conversion accuracy (< 0.02 ΔE)
+  - XYZ round-trip testing
+  - Grayscale ↔ RGB transforms
+  - Bit depth consistency (8-bit vs 16-bit)
+  - D50 white point verification
+  - Alpha channel preservation
+
+- `rendering_intents.rs` with 7 tests:
+  - All 4 rendering intents tested
+  - lcms2 comparison for all intents
+  - Identity transform verification
+
+### Test Results
+- 47 tests passing (up from 32)
+- All 4 rendering intents produce identical results between moxcms and lcms2
+- Lab conversion accurate to within 0.02 ΔE
+- Grayscale luminance correctly weights green > red > blue
+
+### Key Findings
+1. **Rendering intent parity**: All 4 intents match lcms2 exactly
+2. **Lab accuracy**: Computed Lab matches reference values within 0.02 ΔE
+3. **White point**: All profiles correctly use D50 PCS (ICC standard)
+4. **Luminance**: Green (219) > Red (129) > Blue (71) for pure primaries
 
 ---
 
