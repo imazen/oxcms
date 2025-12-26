@@ -8,7 +8,7 @@
 //! 1. Fixed to match reference
 //! 2. Documented with justification for why we differ
 
-use cms_tests::accuracy::{compare_rgb_buffers, delta_e_2000, srgb_to_lab};
+use cms_tests::accuracy::{delta_e_2000, srgb_to_lab};
 use cms_tests::patterns::{generate_pattern, TestPattern};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 use std::collections::HashMap;

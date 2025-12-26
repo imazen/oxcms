@@ -5,7 +5,6 @@
 
 use crate::profile::ColorProfile;
 use crate::{Error, Result};
-use moxcms::TransformExecutor;
 
 /// Rendering intent for color transformations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
