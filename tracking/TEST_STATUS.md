@@ -9,12 +9,14 @@ Last updated: 2025-12-25
 | oxcms-core | 6 | 6 | 0 | 0 | Core API |
 | cms-tests lib | 6 | 6 | 0 | 0 | Accuracy |
 | Corpus validation | 3 | 3 | 0 | 0 | Parsing |
+| Color space tests | 8 | 8 | 0 | 0 | Lab/XYZ/Gray |
 | Extended parity | 7 | 7 | 0 | 0 | Transforms |
 | lcms2 parity | 3 | 3 | 0 | 0 | Parity |
 | Math differences | 4 | 4 | 0 | 0 | Documentation |
 | moxcms parity | 2 | 2 | 0 | 0 | Consistency |
+| Rendering intents | 7 | 7 | 0 | 0 | Intent comparison |
 | Doc tests | 1 | 1 | 0 | 0 | Examples |
-| **Total** | **32** | **32** | **0** | **0** | **100%** |
+| **Total** | **47** | **47** | **0** | **0** | **100%** |
 
 ## Test Categories
 
@@ -54,12 +56,12 @@ Last updated: 2025-12-25
 
 ### Rendering Intents
 
-| Test | moxcms | lcms2 | Status |
-|------|--------|-------|--------|
-| Perceptual | ✅ | ✅ | PASS |
-| Relative Colorimetric | ? | ? | TBD |
-| Saturation | ? | ? | TBD |
-| Absolute Colorimetric | ? | ? | TBD |
+| Test | moxcms | lcms2 | Max Diff | Status |
+|------|--------|-------|----------|--------|
+| Perceptual | ✅ | ✅ | 0 | IDENTICAL |
+| Relative Colorimetric | ✅ | ✅ | 0 | IDENTICAL |
+| Saturation | ✅ | ✅ | 0 | IDENTICAL |
+| Absolute Colorimetric | ✅ | ✅ | 0 | IDENTICAL |
 
 ### CMYK Transforms
 
