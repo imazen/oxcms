@@ -1,0 +1,23 @@
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+*.log
+comparison_outputs/
+
+# Downloaded test data (regenerate with scripts/fetch-test-profiles.sh)
+testdata/profiles/*.icc
+testdata/corpus/**/*.icc
+!testdata/.gitkeep

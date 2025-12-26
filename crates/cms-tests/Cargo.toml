@@ -1,0 +1,54 @@
+[package]
+name = "cms-tests"
+version = "0.1.0"
+description = "Cross-CMS parity tests for oxcms"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# Our implementation
+oxcms-core = { path = "../oxcms-core" }
+
+# Reference implementations for comparison
+moxcms.workspace = true
+lcms2.workspace = true
+# qcms.workspace = true  # Enable when tests ready
+
+# Color science for accuracy measurement
+palette.workspace = true
+
+# Serialization for test data
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Random data generation
+rand.workspace = true
+rand_chacha.workspace = true
+
+# Parallel execution
+rayon.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[test]]
+name = "lcms2_parity"
+path = "tests/lcms2_parity.rs"
+
+[[test]]
+name = "moxcms_parity"
+path = "tests/moxcms_parity.rs"
+
+[[test]]
+name = "math_differences"
+path = "tests/math_differences.rs"
+
+[[test]]
+name = "corpus_validation"
+path = "tests/corpus_validation.rs"

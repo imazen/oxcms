@@ -1,0 +1,21 @@
+[package]
+name = "oxcms-core"
+version = "0.1.0"
+description = "Fast, safe, complete color management system in Rust"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["color", "icc", "cms", "color-management", "profile"]
+categories = ["graphics", "multimedia::images"]
+
+[dependencies]
+thiserror.workspace = true
+bytemuck.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "transform"
+harness = false
