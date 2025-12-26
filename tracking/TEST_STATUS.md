@@ -1,6 +1,6 @@
 # Test Status Tracking
 
-Last updated: 2025-12-25
+Last updated: 2025-12-26
 
 ## Summary
 
@@ -15,8 +15,10 @@ Last updated: 2025-12-25
 | Math differences | 4 | 4 | 0 | 0 | Documentation |
 | moxcms parity | 2 | 2 | 0 | 0 | Consistency |
 | Rendering intents | 7 | 7 | 0 | 0 | Intent comparison |
+| qcms parity | 11 | 11 | 0 | 0 | Firefox CMS |
+| Corpus parity | 4 | 4 | 0 | 0 | 110 ICC profiles |
 | Doc tests | 1 | 1 | 0 | 0 | Examples |
-| **Total** | **47** | **47** | **0** | **0** | **100%** |
+| **Total** | **62** | **62** | **0** | **0** | **100%** |
 
 ## Test Categories
 
@@ -80,6 +82,20 @@ Last updated: 2025-12-25
 | RGB → XYZ | ? | ? | TBD |
 | XYZ → RGB | ? | ? | TBD |
 
+### qcms Comparison (Firefox CMS)
+
+| Test | qcms | moxcms | lcms2 | Max Diff | Status |
+|------|------|--------|-------|----------|--------|
+| sRGB identity | ✅ | ✅ | ✅ | 0 | IDENTICAL |
+| Three-way comparison | ✅ | ✅ | ✅ | 0 | IDENTICAL |
+| Perceptual intent | ✅ | - | ✅ | 0 | IDENTICAL |
+| Relative intent | ✅ | - | ✅ | 0 | IDENTICAL |
+| Saturation intent | ✅ | - | ✅ | 0 | IDENTICAL |
+| Absolute intent | ✅ | - | ✅ | 0 | IDENTICAL |
+| RGBA transform | ✅ | - | - | 0 | PASS |
+| Determinism | ✅ | - | - | 0 | PASS |
+| Grayscale transforms | ❌ | ✅ | ✅ | N/A | NOT SUPPORTED |
+
 ## Key Findings
 
 ### moxcms vs lcms2 sRGB Identity
@@ -96,6 +112,18 @@ Last updated: 2025-12-25
 ### Round-Trip Accuracy
 - sRGB → P3 → sRGB for mid-gray: **perfect** (ΔE: 0.0000)
 - Round-trip error < 1 ΔE for neutral colors
+
+### qcms vs moxcms vs lcms2
+- **All three CMS produce identical output** for sRGB identity transforms
+- Maximum channel difference across all three: **0**
+- All 4 rendering intents match exactly between qcms and lcms2
+- qcms is deterministic (10 iterations produce identical results)
+- qcms correctly preserves alpha channel in RGBA transforms
+
+### qcms Limitations
+- **No grayscale transform support** - panics on Gray8 data type
+- In-place transform API only (no separate input/output buffers)
+- Limited profile introspection (is_srgb field is private)
 
 ## Update Process
 

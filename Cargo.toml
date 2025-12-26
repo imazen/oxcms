@@ -15,7 +15,7 @@ repository = "https://github.com/user/oxcms"
 # Core dependencies
 moxcms = "0.7"
 lcms2 = "6"
-qcms = "0.1"
+qcms = "0.3"
 
 # Color science
 palette = "0.7"

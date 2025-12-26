@@ -87,6 +87,89 @@
 
 ---
 
+## 2025-12-26: qcms Parity Testing
+
+### Added
+- `qcms_parity.rs` test suite with 11 tests:
+  - Profile creation (sRGB, Gray, XYZ D50)
+  - sRGB identity transform
+  - qcms vs lcms2 comparison
+  - qcms vs moxcms comparison
+  - Three-way CMS comparison
+  - All 4 rendering intents
+  - RGBA transform with alpha preservation
+  - Grayscale profile (creation only, transforms not supported)
+  - ICC profile parsing
+  - Determinism verification
+  - All intents vs lcms2 comparison
+
+### Test Results
+- 58 tests passing (up from 47)
+- All three CMS (qcms, moxcms, lcms2) produce **identical** sRGB identity output
+- All 4 rendering intents match exactly between qcms and lcms2
+- Maximum channel difference: **0**
+
+### Key Findings
+1. **Three-way parity**: qcms, moxcms, and lcms2 all produce identical output for sRGB identity transforms
+2. **Intent parity**: All 4 intents match between qcms and lcms2 (diff: 0)
+3. **Determinism**: qcms produces identical results across multiple iterations
+4. **Alpha preservation**: RGBA transforms correctly preserve alpha channel
+
+### qcms Limitations Discovered
+1. **No grayscale transforms**: qcms panics on Gray8 DataType (expects input/output types to match profile types)
+2. **In-place API only**: Unlike moxcms/lcms2, qcms only supports in-place transforms
+3. **Limited introspection**: Profile fields like `is_srgb` are private
+4. **ICC parsing quirks**: Some ICC profiles fail to parse that work with lcms2
+
+---
+
+## 2025-12-26: ICC Profile Corpus
+
+### Added
+- **110 ICC profiles** from multiple sources:
+  - lcms2 testbed (11 profiles) - MIT license
+  - qcms/Mozilla (9 profiles + 6 fuzz samples) - MIT license
+  - skcms/Google (~70 profiles) - BSD-3 license
+  - ICC.org (3 reference profiles) - freely redistributable
+  - Compact-ICC (9 minimal profiles) - CC0 public domain
+
+- **14 test images** with embedded profiles:
+  - Skia test images (3 files)
+  - Pillow test images (2 files)
+  - Compact-ICC minimal profiles (9 files)
+
+- `corpus_parity.rs` test suite with 4 tests:
+  - Profile parsing across all CMS
+  - Transform parity testing
+  - sRGB consistency validation
+  - Profile category analysis
+
+### Test Results
+- 62 tests passing (up from 58)
+- Total corpus size: 4.8MB
+
+### Corpus Parsing Results
+| CMS | Profiles Parsed | Percentage |
+|-----|-----------------|------------|
+| lcms2 | 108/119 | 91% |
+| qcms | 87/119 | 73% |
+| moxcms | 76/119 | 64% |
+| All 3 | 76/119 | 64% |
+
+### Transform Parity Results (55 standard RGB profiles)
+- Identical output: 24 profiles (44%)
+- Small differences (<=2): 19 profiles (35%)
+- Large differences (>2): 12 profiles (22%)
+- Overall parity: **78% acceptable**
+
+### Key Findings
+1. **lcms2 is most compatible** - parses 91% of profiles
+2. **moxcms is strictest** - only 64% parsed (stricter validation)
+3. **Transform parity varies** - device-specific and v4 profiles show most differences
+4. **sRGB consistency excellent** - all sRGB variants produce identical output
+
+---
+
 ## Template for Future Entries
 
 ```markdown

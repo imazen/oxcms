@@ -14,7 +14,7 @@ oxcms-core = { path = "../oxcms-core" }
 # Reference implementations for comparison
 moxcms.workspace = true
 lcms2.workspace = true
-# qcms.workspace = true  # Enable when tests ready
+qcms.workspace = true
 
 # Color science for accuracy measurement
 palette.workspace = true
@@ -52,3 +52,11 @@ path = "tests/math_differences.rs"
 [[test]]
 name = "corpus_validation"
 path = "tests/corpus_validation.rs"
+
+[[test]]
+name = "qcms_parity"
+path = "tests/qcms_parity.rs"
+
+[[test]]
+name = "corpus_parity"
+path = "tests/corpus_parity.rs"
