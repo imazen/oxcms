@@ -33,7 +33,17 @@ pub enum Error {
     #[error("Buffer size mismatch: expected {expected}, got {actual}")]
     BufferSize { expected: usize, actual: usize },
 
+    /// Invalid pixel layout
+    #[error("Invalid layout: {0}")]
+    InvalidLayout(String),
+
     /// I/O error
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+impl From<moxcms::CmsError> for Error {
+    fn from(e: moxcms::CmsError) -> Self {
+        Error::Transform(format!("{:?}", e))
+    }
 }
