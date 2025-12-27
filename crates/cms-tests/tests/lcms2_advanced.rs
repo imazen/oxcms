@@ -1785,6 +1785,221 @@ fn test_gray_identity_transform() {
     );
 }
 
+// ============================================================================
+// Profile Inspection Tests
+// Tests for profile metadata and introspection
+// ============================================================================
+
+/// Test profile version reading
+#[test]
+fn test_profile_version() {
+    // sRGB should be version 2.1
+    let srgb = Profile::new_srgb();
+    let version = srgb.version();
+    assert!(
+        version >= 2.0 && version < 5.0,
+        "sRGB version should be between 2.0 and 5.0, got {}",
+        version
+    );
+
+    // Lab4 should be version 4.x
+    let lab4 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab4 profile failed");
+    let version = lab4.version();
+    assert!(
+        version >= 4.0 && version < 5.0,
+        "Lab4 version should be 4.x, got {}",
+        version
+    );
+}
+
+/// Test profile color space detection
+#[test]
+fn test_profile_color_space() {
+    let srgb = Profile::new_srgb();
+    assert_eq!(
+        srgb.color_space(),
+        lcms2::ColorSpaceSignature::RgbData,
+        "sRGB should have RGB color space"
+    );
+
+    let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab4 profile failed");
+    assert_eq!(
+        lab.color_space(),
+        lcms2::ColorSpaceSignature::LabData,
+        "Lab4 should have Lab color space"
+    );
+
+    let xyz = Profile::new_xyz();
+    assert_eq!(
+        xyz.color_space(),
+        lcms2::ColorSpaceSignature::XYZData,
+        "XYZ should have XYZ color space"
+    );
+
+    let gray = ToneCurve::new(2.2);
+    let gray_profile = Profile::new_gray(&d50_white_point(), &gray).expect("Gray profile failed");
+    assert_eq!(
+        gray_profile.color_space(),
+        lcms2::ColorSpaceSignature::GrayData,
+        "Gray should have Gray color space"
+    );
+}
+
+/// Test profile PCS detection
+#[test]
+fn test_profile_pcs() {
+    let srgb = Profile::new_srgb();
+    let pcs = srgb.pcs();
+    // sRGB connects to Lab or XYZ
+    assert!(
+        pcs == lcms2::ColorSpaceSignature::LabData || pcs == lcms2::ColorSpaceSignature::XYZData,
+        "sRGB PCS should be Lab or XYZ, got {:?}",
+        pcs
+    );
+}
+
+/// Test matrix shaper detection
+#[test]
+fn test_is_matrix_shaper() {
+    let srgb = Profile::new_srgb();
+    assert!(srgb.is_matrix_shaper(), "sRGB should be a matrix shaper profile");
+}
+
+/// Test intent support
+#[test]
+fn test_intent_support() {
+    let srgb = Profile::new_srgb();
+
+    // Constants from lcms2: LCMS_USED_AS_INPUT=0, LCMS_USED_AS_OUTPUT=1, LCMS_USED_AS_PROOF=2
+    const USED_AS_INPUT: u32 = 0;
+    const USED_AS_OUTPUT: u32 = 1;
+
+    // sRGB should support relative colorimetric
+    assert!(
+        srgb.is_intent_supported(Intent::RelativeColorimetric, USED_AS_INPUT),
+        "sRGB should support relative colorimetric as input"
+    );
+    assert!(
+        srgb.is_intent_supported(Intent::RelativeColorimetric, USED_AS_OUTPUT),
+        "sRGB should support relative colorimetric as output"
+    );
+}
+
+/// Test tag signatures
+#[test]
+fn test_tag_signatures() {
+    let srgb = Profile::new_srgb();
+    let tags = srgb.tag_signatures();
+
+    // sRGB should have various tags
+    assert!(!tags.is_empty(), "sRGB should have tags");
+
+    // Should have red colorant tag
+    assert!(
+        srgb.has_tag(lcms2::TagSignature::RedColorantTag),
+        "sRGB should have RedColorantTag"
+    );
+
+    // Should have green colorant tag
+    assert!(
+        srgb.has_tag(lcms2::TagSignature::GreenColorantTag),
+        "sRGB should have GreenColorantTag"
+    );
+
+    // Should have blue colorant tag
+    assert!(
+        srgb.has_tag(lcms2::TagSignature::BlueColorantTag),
+        "sRGB should have BlueColorantTag"
+    );
+}
+
+/// Test black point detection
+/// Port of CheckBlackPoint from testcms2.c (simplified)
+#[test]
+fn test_black_point_detection() {
+    let srgb = Profile::new_srgb();
+
+    // sRGB should have a black point near (0, 0, 0)
+    let bp = srgb
+        .detect_black_point(Intent::RelativeColorimetric)
+        .expect("Black point detection failed");
+
+    // Convert to Lab for easier checking
+    use lcms2::CIEXYZExt;
+    let d50 = d50_xyz();
+    let lab = bp.to_lab(&d50);
+
+    // Black point should be near L*=0
+    assert!(
+        lab.L < 5.0,
+        "sRGB black point L* should be near 0, got {}",
+        lab.L
+    );
+}
+
+/// Test device class
+#[test]
+fn test_device_class() {
+    let srgb = Profile::new_srgb();
+    let device_class = srgb.device_class();
+
+    // sRGB is a display profile
+    assert_eq!(
+        device_class,
+        lcms2::ProfileClassSignature::DisplayClass,
+        "sRGB should be a Display profile"
+    );
+}
+
+/// Test profile rendering intent header
+#[test]
+fn test_header_rendering_intent() {
+    let srgb = Profile::new_srgb();
+    let _intent = srgb.header_rendering_intent();
+    // Just verify it doesn't crash - the intent value depends on the profile
+}
+
+/// Test profile serialization and deserialization
+#[test]
+fn test_profile_icc_roundtrip() {
+    let srgb = Profile::new_srgb();
+
+    // Serialize to ICC bytes
+    let icc_data = srgb.icc().expect("ICC serialization failed");
+    assert!(!icc_data.is_empty(), "ICC data should not be empty");
+
+    // Deserialize back
+    let srgb2 = Profile::new_icc(&icc_data).expect("ICC deserialization failed");
+
+    // Check that color space matches
+    assert_eq!(
+        srgb.color_space(),
+        srgb2.color_space(),
+        "Color space should match after roundtrip"
+    );
+
+    // Check that version matches
+    assert!(
+        (srgb.version() - srgb2.version()).abs() < 0.01,
+        "Version should match after roundtrip"
+    );
+}
+
+/// Test profile info extraction
+#[test]
+fn test_profile_info() {
+    let srgb = Profile::new_srgb();
+
+    // Try to get profile description
+    let desc = srgb.info(lcms2::InfoType::Description, lcms2::Locale::none());
+    // It's ok if this returns None - not all profiles have all info fields
+    if let Some(d) = desc {
+        assert!(!d.is_empty(), "Description should not be empty if present");
+    }
+}
+
 #[test]
 fn test_advanced_summary() {
     println!("lcms2 advanced tests summary:");
@@ -1813,4 +2028,14 @@ fn test_advanced_summary() {
     println!("  - Gamma estimation");
     println!("  - sRGB to XYZ known values");
     println!("  - Gray identity transform");
+    println!("  - Profile version inspection");
+    println!("  - Profile color space detection");
+    println!("  - Profile PCS detection");
+    println!("  - Matrix shaper detection");
+    println!("  - Intent support testing");
+    println!("  - Tag signature inspection");
+    println!("  - Black point detection");
+    println!("  - Device class detection");
+    println!("  - Profile ICC roundtrip");
+    println!("  - Profile info extraction");
 }
