@@ -1404,6 +1404,387 @@ fn test_placeholder_profile() {
 // Summary Test
 // ============================================================================
 
+// ============================================================================
+// Colorimetric Conversion Tests
+// Port of CheckLab2XYZ, CheckLab2xyY, CheckTemp2CHRM from testcms2.c
+// ============================================================================
+
+/// Get D50 white point as CIEXYZ (ICC PCS standard illuminant)
+fn d50_xyz() -> lcms2::CIEXYZ {
+    lcms2::CIEXYZ {
+        X: 0.9642,
+        Y: 1.0,
+        Z: 0.8249,
+    }
+}
+
+/// Test Lab <-> XYZ roundtrip accuracy
+/// Port of CheckLab2XYZ from testcms2.c
+#[test]
+fn test_lab_xyz_roundtrip() {
+    use lcms2::{CIELab, CIELabExt, CIEXYZExt};
+
+    let white_point = d50_xyz();
+    let mut max_delta_e = 0.0f64;
+
+    // Test a range of Lab values
+    for l in (0..=100).step_by(10) {
+        for a in (-128..=128).step_by(16) {
+            for b in (-128..=128).step_by(16) {
+                let lab = CIELab {
+                    L: l as f64,
+                    a: a as f64,
+                    b: b as f64,
+                };
+
+                // Lab -> XYZ -> Lab
+                let xyz = lab.to_xyz(&white_point);
+                let lab2 = xyz.to_lab(&white_point);
+
+                let delta_e = lab.delta_e(&lab2);
+                if delta_e > max_delta_e {
+                    max_delta_e = delta_e;
+                }
+            }
+        }
+    }
+
+    // lcms2 testbed requires < 1E-12, but we use transforms
+    assert!(
+        max_delta_e < 1e-10,
+        "Lab <-> XYZ roundtrip max dE: {} (should be < 1e-10)",
+        max_delta_e
+    );
+}
+
+/// Test XYZ <-> xyY roundtrip accuracy
+/// Port of CheckLab2xyY from testcms2.c (tests XYZ/xyY conversion)
+#[test]
+fn test_xyz_xyy_roundtrip() {
+    use lcms2::{CIELab, CIELabExt, CIEXYZExt};
+
+    let white_point = d50_xyz();
+    let mut max_delta_e = 0.0f64;
+
+    // Test by going Lab -> XYZ -> xyY -> XYZ -> Lab
+    for l in (0..=100).step_by(10) {
+        for a in (-128..=128).step_by(16) {
+            for b in (-128..=128).step_by(16) {
+                let lab = CIELab {
+                    L: l as f64,
+                    a: a as f64,
+                    b: b as f64,
+                };
+
+                // Lab -> XYZ -> xyY -> XYZ -> Lab
+                let xyz = lab.to_xyz(&white_point);
+                let xyy = lcms2::XYZ2xyY(&xyz);
+                let xyz2 = lcms2::xyY2XYZ(&xyy);
+                let lab2 = xyz2.to_lab(&white_point);
+
+                let delta_e = lab.delta_e(&lab2);
+                if delta_e > max_delta_e {
+                    max_delta_e = delta_e;
+                }
+            }
+        }
+    }
+
+    assert!(
+        max_delta_e < 1e-10,
+        "XYZ <-> xyY roundtrip max dE: {} (should be < 1e-10)",
+        max_delta_e
+    );
+}
+
+/// Test temperature <-> chromaticity roundtrip
+/// Port of CheckTemp2CHRM from testcms2.c
+#[test]
+fn test_temp_chromaticity_roundtrip() {
+    use lcms2::CIExzYExt;
+
+    let mut max_diff = 0.0f64;
+
+    // Test color temperatures from 4000K to 25000K
+    for temp in (4000..25000).step_by(100) {
+        let temp_f = temp as f64;
+
+        // Get chromaticity from temperature
+        let xyy = lcms2::white_point_from_temp(temp_f).expect("white_point_from_temp failed");
+
+        // Get temperature back from chromaticity
+        let temp2 = xyy.temp().expect("temp() failed");
+
+        let diff = (temp2 - temp_f).abs();
+        if diff > max_diff {
+            max_diff = diff;
+        }
+    }
+
+    // lcms2 testbed allows up to 100 degree difference
+    assert!(
+        max_diff < 100.0,
+        "Temperature <-> chromaticity max diff: {} (should be < 100)",
+        max_diff
+    );
+}
+
+/// Test Lab encoding/decoding V4 roundtrip
+/// Port of CheckLabV4encoding from testcms2.c
+#[test]
+fn test_lab_v4_encoding_roundtrip() {
+    use lcms2::{CIELab, CIELabExt};
+
+    let mut errors = 0u32;
+
+    for j in 0u16..65535 {
+        let encoded: [u16; 3] = [j, j, j];
+
+        // Decode and re-encode
+        let lab = CIELab::from_encoded(&encoded);
+        let re_encoded = lab.encoded();
+
+        for i in 0..3 {
+            if re_encoded[i] != j {
+                errors += 1;
+            }
+        }
+    }
+
+    assert_eq!(errors, 0, "Lab V4 encoding roundtrip had {} errors", errors);
+}
+
+/// Test Lab encoding/decoding V2 roundtrip
+/// Port of CheckLabV2encoding from testcms2.c
+#[test]
+fn test_lab_v2_encoding_roundtrip() {
+    use lcms2::{CIELab, CIELabExt};
+
+    let mut errors = 0u32;
+
+    for j in 0u16..65535 {
+        let encoded: [u16; 3] = [j, j, j];
+
+        // Decode and re-encode
+        let lab = CIELab::from_encoded_v2(&encoded);
+        let re_encoded = lab.encoded_v2();
+
+        for i in 0..3 {
+            if re_encoded[i] != j {
+                errors += 1;
+            }
+        }
+    }
+
+    assert_eq!(errors, 0, "Lab V2 encoding roundtrip had {} errors", errors);
+}
+
+/// Test chromatic adaptation
+/// Port of adapt to illuminant functionality
+#[test]
+fn test_chromatic_adaptation() {
+    use lcms2::{CIEXYZExt, CIEXYZ};
+
+    // D50 to D65 adaptation
+    let d50 = CIEXYZ {
+        X: 0.9642,
+        Y: 1.0,
+        Z: 0.8249,
+    };
+    let d65 = CIEXYZ {
+        X: 0.9505,
+        Y: 1.0,
+        Z: 1.0890,
+    };
+
+    // White under D50
+    let white_d50 = CIEXYZ {
+        X: 0.9642,
+        Y: 1.0,
+        Z: 0.8249,
+    };
+
+    // Adapt to D65
+    let adapted = white_d50
+        .adapt_to_illuminant(&d50, &d65)
+        .expect("adapt_to_illuminant failed");
+
+    // The adapted white should be close to D65
+    let err_x = (adapted.X - d65.X).abs();
+    let err_y = (adapted.Y - d65.Y).abs();
+    let err_z = (adapted.Z - d65.Z).abs();
+
+    assert!(
+        err_x < 0.001 && err_y < 0.001 && err_z < 0.001,
+        "Chromatic adaptation error: X={:.6}, Y={:.6}, Z={:.6}",
+        err_x,
+        err_y,
+        err_z
+    );
+}
+
+/// Test Delta E calculations
+#[test]
+fn test_delta_e_metrics() {
+    use lcms2::{CIELab, CIELabExt};
+
+    // Two identical colors should have dE = 0
+    let lab1 = CIELab {
+        L: 50.0,
+        a: 10.0,
+        b: -20.0,
+    };
+    let lab2 = CIELab {
+        L: 50.0,
+        a: 10.0,
+        b: -20.0,
+    };
+
+    assert!(
+        lab1.delta_e(&lab2).abs() < 1e-10,
+        "Identical colors should have dE76 = 0"
+    );
+    assert!(
+        lab1.cie94_delta_e(&lab2).abs() < 1e-10,
+        "Identical colors should have dE94 = 0"
+    );
+    assert!(
+        lab1.cie2000_delta_e(&lab2, 1.0, 1.0, 1.0).abs() < 1e-10,
+        "Identical colors should have dE2000 = 0"
+    );
+
+    // Different colors should have positive dE
+    let lab3 = CIELab {
+        L: 60.0,
+        a: 20.0,
+        b: -10.0,
+    };
+
+    assert!(lab1.delta_e(&lab3) > 0.0, "Different colors should have dE76 > 0");
+    assert!(
+        lab1.cie94_delta_e(&lab3) > 0.0,
+        "Different colors should have dE94 > 0"
+    );
+    assert!(
+        lab1.cie2000_delta_e(&lab3, 1.0, 1.0, 1.0) > 0.0,
+        "Different colors should have dE2000 > 0"
+    );
+}
+
+/// Test gamma estimation for power-law curves
+#[test]
+fn test_gamma_estimation() {
+    let gammas = [1.8f64, 2.2, 2.4, 3.0];
+
+    for g in gammas {
+        let curve = ToneCurve::new(g);
+        let estimated = curve.estimated_gamma(0.001).expect("Gamma estimation failed");
+
+        let err = (estimated - g).abs();
+        assert!(
+            err < 0.001,
+            "Gamma estimation for {}: got {}, error {}",
+            g,
+            estimated,
+            err
+        );
+    }
+}
+
+/// Test sRGB to XYZ known values
+/// Port of Chack_sRGB_Float known value checks from testcms2.c
+#[test]
+fn test_srgb_to_xyz_known_values() {
+    let srgb = Profile::new_srgb();
+    let xyz_profile = Profile::new_xyz();
+
+    let transform = lcms2::Transform::<[f32; 3], [f64; 3]>::new(
+        &srgb,
+        PixelFormat::RGB_FLT,
+        &xyz_profile,
+        PixelFormat::XYZ_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test cases: (R, G, B) -> (X, Y, Z) with tolerance
+    let test_cases: [([u8; 3], [f64; 3], f64); 5] = [
+        ([1, 1, 1], [0.0002927, 0.0003035, 0.000250], 0.0001),
+        ([127, 127, 127], [0.2046329, 0.212230, 0.175069], 0.0001),
+        ([12, 13, 15], [0.0038364, 0.0039928, 0.003853], 0.0001),
+        ([128, 0, 0], [0.0941240, 0.0480256, 0.003005], 0.0001),
+        ([190, 25, 210], [0.3204592, 0.1605926, 0.468213], 0.0001),
+    ];
+
+    for (rgb_u8, expected_xyz, tol) in test_cases {
+        let rgb = [
+            rgb_u8[0] as f32 / 255.0,
+            rgb_u8[1] as f32 / 255.0,
+            rgb_u8[2] as f32 / 255.0,
+        ];
+        let mut xyz = [0.0f64; 3];
+        transform.transform_pixels(slice::from_ref(&rgb), slice::from_mut(&mut xyz));
+
+        let err_x = (xyz[0] - expected_xyz[0]).abs();
+        let err_y = (xyz[1] - expected_xyz[1]).abs();
+        let err_z = (xyz[2] - expected_xyz[2]).abs();
+
+        assert!(
+            err_x < tol && err_y < tol && err_z < tol,
+            "sRGB({},{},{}) -> XYZ: got ({:.6},{:.6},{:.6}), expected ({:.6},{:.6},{:.6})",
+            rgb_u8[0],
+            rgb_u8[1],
+            rgb_u8[2],
+            xyz[0],
+            xyz[1],
+            xyz[2],
+            expected_xyz[0],
+            expected_xyz[1],
+            expected_xyz[2]
+        );
+    }
+}
+
+/// Test gray profile identity transform
+/// Tests that gray -> gray with same profile is identity
+#[test]
+fn test_gray_identity_transform() {
+    // Create gray profile with gamma 2.2
+    let gamma_22 = ToneCurve::new(2.2);
+    let gray = Profile::new_gray(&d50_white_point(), &gamma_22).expect("Gray profile failed");
+
+    // Gray -> Gray (same profile, should be identity)
+    let transform = lcms2::Transform::<[f32; 1], [f32; 1]>::new(
+        &gray,
+        PixelFormat::GRAY_FLT,
+        &gray,
+        PixelFormat::GRAY_FLT,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Gray identity transform failed");
+
+    // Test identity behavior
+    let mut max_err = 0.0f32;
+    for i in 0..=100 {
+        let v = i as f32 / 100.0;
+        let input = [v];
+        let mut output = [0.0f32; 1];
+
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
+
+        let err = (output[0] - v).abs();
+        if err > max_err {
+            max_err = err;
+        }
+    }
+
+    assert!(
+        max_err < 0.001,
+        "Gray identity transform max error: {} (should be < 0.001)",
+        max_err
+    );
+}
+
 #[test]
 fn test_advanced_summary() {
     println!("lcms2 advanced tests summary:");
@@ -1423,4 +1804,13 @@ fn test_advanced_summary() {
     println!("  - Null and placeholder profiles");
     println!("  - Custom RGB profiles (Rec709, Above)");
     println!("  - Device link profiles");
+    println!("  - Lab <-> XYZ roundtrip");
+    println!("  - XYZ <-> xyY roundtrip");
+    println!("  - Temperature <-> chromaticity roundtrip");
+    println!("  - Lab V2/V4 encoding roundtrip");
+    println!("  - Chromatic adaptation");
+    println!("  - Delta E metrics");
+    println!("  - Gamma estimation");
+    println!("  - sRGB to XYZ known values");
+    println!("  - Gray identity transform");
 }
