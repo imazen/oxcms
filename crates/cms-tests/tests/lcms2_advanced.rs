@@ -609,6 +609,302 @@ fn test_device_link_creation() {
 }
 
 // ============================================================================
+// Lab V2/V4 Cross-Version Transform Tests
+// Port of CheckFloatLabTransforms from testcms2.c
+// ============================================================================
+
+/// Helper function to check Lab identity transform
+fn check_lab_identity(lab1: &Profile, lab2: &Profile, name: &str) {
+    let transform = lcms2::Transform::<[f64; 3], [f64; 3]>::new(
+        lab1,
+        PixelFormat::Lab_DBL,
+        lab2,
+        PixelFormat::Lab_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect(&format!("{} transform creation failed", name));
+
+    // Test several Lab values
+    let test_cases = [
+        [0.0f64, 0.0, 0.0],     // Black
+        [100.0, 0.0, 0.0],      // White
+        [50.0, 0.0, 0.0],       // Mid-gray
+        [50.0, 50.0, 0.0],      // Reddish
+        [50.0, -50.0, 0.0],     // Greenish
+        [50.0, 0.0, 50.0],      // Yellowish
+        [50.0, 0.0, -50.0],     // Bluish
+        [75.0, 25.0, -25.0],    // Arbitrary color
+        [25.0, -30.0, 40.0],    // Another arbitrary
+    ];
+
+    for lab_in in test_cases {
+        let mut lab_out = [0.0f64; 3];
+        transform.transform_pixels(slice::from_ref(&lab_in), slice::from_mut(&mut lab_out));
+
+        let max_err = (lab_out[0] - lab_in[0])
+            .abs()
+            .max((lab_out[1] - lab_in[1]).abs())
+            .max((lab_out[2] - lab_in[2]).abs());
+
+        assert!(
+            max_err < 0.001,
+            "{} identity failed: {:?} -> {:?}, error {}",
+            name,
+            lab_in,
+            lab_out,
+            max_err
+        );
+    }
+}
+
+/// Test Lab V4 to Lab V4 transform (identity)
+#[test]
+fn test_lab_v4_to_v4_transform() {
+    let lab1 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile 1 creation failed");
+    let lab2 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile 2 creation failed");
+
+    check_lab_identity(&lab1, &lab2, "Lab4/Lab4");
+}
+
+/// Test Lab V2 to Lab V2 transform (identity)
+#[test]
+fn test_lab_v2_to_v2_transform() {
+    let lab1 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile 1 creation failed");
+    let lab2 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile 2 creation failed");
+
+    check_lab_identity(&lab1, &lab2, "Lab2/Lab2");
+}
+
+/// Test Lab V4 to Lab V2 transform (cross-version)
+#[test]
+fn test_lab_v4_to_v2_transform() {
+    let lab_v4 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile creation failed");
+    let lab_v2 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile creation failed");
+
+    check_lab_identity(&lab_v4, &lab_v2, "Lab4/Lab2");
+}
+
+/// Test Lab V2 to Lab V4 transform (cross-version)
+#[test]
+fn test_lab_v2_to_v4_transform() {
+    let lab_v2 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile creation failed");
+    let lab_v4 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile creation failed");
+
+    check_lab_identity(&lab_v2, &lab_v4, "Lab2/Lab4");
+}
+
+// ============================================================================
+// Lab Encoded Transform Tests
+// Port of CheckEncodedLabTransforms from testcms2.c
+// ============================================================================
+
+/// Test encoded Lab V4 to float Lab transform
+#[test]
+fn test_encoded_lab_v4_transform() {
+    let lab1 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile 1 creation failed");
+    let lab2 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile 2 creation failed");
+
+    // Lab16 to Lab_DBL
+    let transform = lcms2::Transform::<[u16; 3], [f64; 3]>::new(
+        &lab1,
+        PixelFormat::Lab_16,
+        &lab2,
+        PixelFormat::Lab_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test white: 0xFFFF, 0x8080, 0x8080 should give L=100, a=0, b=0
+    let white_in: [u16; 3] = [0xFFFF, 0x8080, 0x8080];
+    let mut lab_out = [0.0f64; 3];
+    transform.transform_pixels(slice::from_ref(&white_in), slice::from_mut(&mut lab_out));
+
+    let white_expected = [100.0f64, 0.0, 0.0];
+    let err_l = (lab_out[0] - white_expected[0]).abs();
+    let err_a = (lab_out[1] - white_expected[1]).abs();
+    let err_b = (lab_out[2] - white_expected[2]).abs();
+
+    assert!(
+        err_l < 0.01 && err_a < 0.01 && err_b < 0.01,
+        "Encoded white Lab16 -> Lab_DBL failed: {:?} -> {:?}",
+        white_in,
+        lab_out
+    );
+
+    // Test a color value
+    let color_in: [u16; 3] = [0x1234, 0x3434, 0x9A9A];
+    transform.transform_pixels(slice::from_ref(&color_in), slice::from_mut(&mut lab_out));
+
+    // The expected color is L=7.11070, a=-76, b=26 from lcms2 testbed
+    let color_expected = [7.11070f64, -76.0, 26.0];
+    let err_l = (lab_out[0] - color_expected[0]).abs();
+    let err_a = (lab_out[1] - color_expected[1]).abs();
+    let err_b = (lab_out[2] - color_expected[2]).abs();
+
+    // Use larger tolerance for this specific color
+    assert!(
+        err_l < 0.1 && err_a < 1.0 && err_b < 1.0,
+        "Encoded color Lab16 -> Lab_DBL failed: {:?} -> L={:.5} a={:.2} b={:.2} (expected L={:.5} a={:.0} b={:.0})",
+        color_in,
+        lab_out[0],
+        lab_out[1],
+        lab_out[2],
+        color_expected[0],
+        color_expected[1],
+        color_expected[2]
+    );
+}
+
+/// Test Lab V2 encoding to Lab V4
+#[test]
+fn test_lab_v2_to_v4_encoded() {
+    let lab_v2 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile creation failed");
+    let lab_v4 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile creation failed");
+
+    // Lab V2 uses different encoding (0xFF00 for L=100)
+    let transform = lcms2::Transform::<[u16; 3], [f64; 3]>::new(
+        &lab_v2,
+        PixelFormat::LabV2_16,
+        &lab_v4,
+        PixelFormat::Lab_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // V2 white: 0xFF00, 0x8000, 0x8000
+    let white_in: [u16; 3] = [0xFF00, 0x8000, 0x8000];
+    let mut lab_out = [0.0f64; 3];
+    transform.transform_pixels(slice::from_ref(&white_in), slice::from_mut(&mut lab_out));
+
+    let err_l = (lab_out[0] - 100.0).abs();
+    let err_a = lab_out[1].abs();
+    let err_b = lab_out[2].abs();
+
+    assert!(
+        err_l < 0.1 && err_a < 0.1 && err_b < 0.1,
+        "Lab V2 white encoding failed: {:?} -> {:?}",
+        white_in,
+        lab_out
+    );
+}
+
+/// Test Lab V4 to Lab V2 encoding
+#[test]
+fn test_lab_v4_to_v2_encoded() {
+    let lab_v4 = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V4 profile creation failed");
+    let lab_v2 = Profile::new_lab2_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab V2 profile creation failed");
+
+    // Lab_DBL to Lab V2
+    let transform = lcms2::Transform::<[f64; 3], [u16; 3]>::new(
+        &lab_v4,
+        PixelFormat::Lab_DBL,
+        &lab_v2,
+        PixelFormat::LabV2_16,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // White in Lab_DBL
+    let white_in: [f64; 3] = [100.0, 0.0, 0.0];
+    let mut v2_out = [0u16; 3];
+    transform.transform_pixels(slice::from_ref(&white_in), slice::from_mut(&mut v2_out));
+
+    // V2 white should be 0xFF00, 0x8000, 0x8000
+    assert_eq!(
+        v2_out[0], 0xFF00,
+        "Lab V4 white -> V2 L encoding failed: got 0x{:04X}",
+        v2_out[0]
+    );
+    assert_eq!(
+        v2_out[1], 0x8000,
+        "Lab V4 white -> V2 a encoding failed: got 0x{:04X}",
+        v2_out[1]
+    );
+    assert_eq!(
+        v2_out[2], 0x8000,
+        "Lab V4 white -> V2 b encoding failed: got 0x{:04X}",
+        v2_out[2]
+    );
+}
+
+// ============================================================================
+// XYZ Float Transform Tests
+// ============================================================================
+
+/// Test XYZ to XYZ float transform (identity)
+#[test]
+fn test_xyz_identity_float() {
+    let xyz = Profile::new_xyz();
+
+    let transform = lcms2::Transform::<[f32; 3], [f32; 3]>::new(
+        &xyz,
+        PixelFormat::XYZ_FLT,
+        &xyz,
+        PixelFormat::XYZ_FLT,
+        Intent::RelativeColorimetric,
+    )
+    .expect("XYZ identity transform creation failed");
+
+    // Test D50 white point
+    let d50_xyz = [0.9642f32, 1.0, 0.8249];
+    let mut xyz_out = [0.0f32; 3];
+    transform.transform_pixels(slice::from_ref(&d50_xyz), slice::from_mut(&mut xyz_out));
+
+    let max_err = (xyz_out[0] - d50_xyz[0])
+        .abs()
+        .max((xyz_out[1] - d50_xyz[1]).abs())
+        .max((xyz_out[2] - d50_xyz[2]).abs());
+
+    assert!(
+        max_err < 0.001,
+        "XYZ identity D50 failed: {:?} -> {:?}, error {}",
+        d50_xyz,
+        xyz_out,
+        max_err
+    );
+
+    // Test arbitrary XYZ values
+    let test_values = [
+        [0.0f32, 0.0, 0.0],
+        [0.5, 0.5, 0.5],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+    ];
+
+    for xyz_in in test_values {
+        transform.transform_pixels(slice::from_ref(&xyz_in), slice::from_mut(&mut xyz_out));
+
+        let max_err = (xyz_out[0] - xyz_in[0])
+            .abs()
+            .max((xyz_out[1] - xyz_in[1]).abs())
+            .max((xyz_out[2] - xyz_in[2]).abs());
+
+        assert!(
+            max_err < 0.001,
+            "XYZ identity failed: {:?} -> {:?}, error {}",
+            xyz_in,
+            xyz_out,
+            max_err
+        );
+    }
+}
+
+// ============================================================================
 // Summary Test
 // ============================================================================
 
@@ -620,7 +916,9 @@ fn test_advanced_summary() {
     println!("  - Proofing transforms (float, 16-bit)");
     println!("  - Gamut checking");
     println!("  - Rec709 parametric curve");
-    println!("  - Lab V2/V4 profiles");
+    println!("  - Lab V2/V4 profiles and cross-version transforms");
+    println!("  - Lab encoded transforms (V2/V4)");
+    println!("  - XYZ identity transforms");
     println!("  - Custom RGB profiles (Rec709)");
     println!("  - Device link profiles");
 }
