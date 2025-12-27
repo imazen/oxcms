@@ -4,7 +4,7 @@
 //! between moxcms and lcms2.
 
 use cms_tests::accuracy::{delta_e_2000, srgb_to_lab};
-use moxcms::TransformExecutor;
+
 
 /// Test that different rendering intents produce different results
 /// for out-of-gamut colors

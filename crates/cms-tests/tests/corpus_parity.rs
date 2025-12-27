@@ -247,6 +247,11 @@ fn test_corpus_transform_parity() {
             Err(_) => continue,
         };
 
+        // Skip non-RGB profiles (CMYK, Gray, Lab, etc.) - they need different layouts
+        if !matches!(lcms2_profile.color_space(), lcms2::ColorSpaceSignature::RgbData) {
+            continue;
+        }
+
         let skcms_profile = match skcms_sys::parse_icc_profile(&data) {
             Some(p) => p,
             None => continue,

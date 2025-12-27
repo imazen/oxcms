@@ -56,6 +56,7 @@ const TEST_COLORS_RGB8: &[[u8; 3]] = &[
 
 /// Result of comparing a single color across all CMS implementations
 #[derive(Debug)]
+#[allow(dead_code)]
 struct ColorComparison {
     input: [u8; 3],
     lcms2: [u8; 3],
@@ -113,6 +114,7 @@ impl ColorComparison {
 
 /// Detailed profile analysis result
 #[derive(Debug)]
+#[allow(dead_code)]
 struct ProfileAnalysis {
     profile_name: String,
     comparisons: Vec<ColorComparison>,
@@ -459,12 +461,12 @@ fn test_v4_profile_structure() {
         let has_b2a2 = data.windows(4).any(|w| w == b"B2A2");
         let has_chad = data.windows(4).any(|w| w == b"chad");
         let has_wtpt = data.windows(4).any(|w| w == b"wtpt");
-        let has_rXYZ = data.windows(4).any(|w| w == b"rXYZ");
-        let has_gXYZ = data.windows(4).any(|w| w == b"gXYZ");
-        let has_bXYZ = data.windows(4).any(|w| w == b"bXYZ");
-        let has_rTRC = data.windows(4).any(|w| w == b"rTRC");
-        let has_gTRC = data.windows(4).any(|w| w == b"gTRC");
-        let has_bTRC = data.windows(4).any(|w| w == b"bTRC");
+        let has_r_xyz = data.windows(4).any(|w| w == b"rXYZ");
+        let has_g_xyz = data.windows(4).any(|w| w == b"gXYZ");
+        let has_b_xyz = data.windows(4).any(|w| w == b"bXYZ");
+        let has_r_trc = data.windows(4).any(|w| w == b"rTRC");
+        let has_g_trc = data.windows(4).any(|w| w == b"gTRC");
+        let has_b_trc = data.windows(4).any(|w| w == b"bTRC");
 
         eprintln!("  Tags present:");
         if has_a2b0 { eprintln!("    A2B0 (Device to PCS - Perceptual)"); }
@@ -475,16 +477,16 @@ fn test_v4_profile_structure() {
         if has_b2a2 { eprintln!("    B2A2 (PCS to Device - Saturation)"); }
         if has_chad { eprintln!("    chad (Chromatic Adaptation)"); }
         if has_wtpt { eprintln!("    wtpt (White Point)"); }
-        if has_rXYZ { eprintln!("    rXYZ (Red Colorant)"); }
-        if has_gXYZ { eprintln!("    gXYZ (Green Colorant)"); }
-        if has_bXYZ { eprintln!("    bXYZ (Blue Colorant)"); }
-        if has_rTRC { eprintln!("    rTRC (Red TRC)"); }
-        if has_gTRC { eprintln!("    gTRC (Green TRC)"); }
-        if has_bTRC { eprintln!("    bTRC (Blue TRC)"); }
+        if has_r_xyz { eprintln!("    rXYZ (Red Colorant)"); }
+        if has_g_xyz { eprintln!("    gXYZ (Green Colorant)"); }
+        if has_b_xyz { eprintln!("    bXYZ (Blue Colorant)"); }
+        if has_r_trc { eprintln!("    rTRC (Red TRC)"); }
+        if has_g_trc { eprintln!("    gTRC (Green TRC)"); }
+        if has_b_trc { eprintln!("    bTRC (Blue TRC)"); }
 
         let profile_type = if has_a2b0 || has_b2a0 || has_a2b1 || has_b2a1 {
             "LUT-based (uses A2B/B2A tables)"
-        } else if has_rXYZ && has_gXYZ && has_bXYZ && has_rTRC && has_gTRC && has_bTRC {
+        } else if has_r_xyz && has_g_xyz && has_b_xyz && has_r_trc && has_g_trc && has_b_trc {
             "Matrix-shaper (uses colorant matrix + TRCs)"
         } else {
             "Unknown structure"
@@ -493,7 +495,7 @@ fn test_v4_profile_structure() {
         eprintln!("  Profile type: {}", profile_type);
 
         // Parse with moxcms to check profile class
-        if let Ok(profile) = moxcms::ColorProfile::new_from_slice(&data) {
+        if let Ok(_profile) = moxcms::ColorProfile::new_from_slice(&data) {
             eprintln!("  moxcms: Successfully parsed");
         } else {
             eprintln!("  moxcms: Parse failed");

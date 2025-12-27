@@ -93,6 +93,7 @@ const TEST_COLORS_RGB8: &[[u8; 3]] = &[
 
 /// Result of a transform comparison
 #[derive(Debug)]
+#[allow(dead_code)]
 struct TransformResult {
     profile_name: String,
     lcms2_output: Vec<[u8; 3]>,

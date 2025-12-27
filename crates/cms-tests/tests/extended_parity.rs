@@ -4,7 +4,7 @@
 //! document any differences using deltaE2000.
 
 use cms_tests::accuracy::{compare_rgb_buffers, delta_e_2000, srgb_to_lab};
-use moxcms::TransformExecutor;
+
 use std::path::Path;
 
 /// Test sRGB to Display P3 transform parity
