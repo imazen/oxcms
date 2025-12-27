@@ -13,8 +13,8 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/user/oxcms"
 
 [workspace.dependencies]
-# Core dependencies
-moxcms = "0.7"
+# Core dependencies - using patched local version with relaxed version parsing
+moxcms = { path = "external/moxcms" }
 lcms2 = "6"
 qcms = "0.3"
 skcms-sys = { path = "crates/skcms-sys" }

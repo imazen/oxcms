@@ -130,9 +130,9 @@ pub struct Transform {
 }
 
 enum TransformInner {
-    U8(Box<moxcms::Transform8BitExecutor>),
-    U16(Box<moxcms::Transform16BitExecutor>),
-    F32(Box<moxcms::TransformF32BitExecutor>),
+    U8(std::sync::Arc<moxcms::Transform8BitExecutor>),
+    U16(std::sync::Arc<moxcms::Transform16BitExecutor>),
+    F32(std::sync::Arc<moxcms::TransformF32Executor>),
 }
 
 impl Transform {

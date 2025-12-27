@@ -61,3 +61,11 @@ path = "tests/qcms_parity.rs"
 [[test]]
 name = "corpus_parity"
 path = "tests/corpus_parity.rs"
+
+[[test]]
+name = "correctness_evaluation"
+path = "tests/correctness_evaluation.rs"
+
+[[test]]
+name = "profile_analysis"
+path = "tests/profile_analysis.rs"
