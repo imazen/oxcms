@@ -396,6 +396,60 @@ Detailed analysis of 10 flagged profiles revealed the root causes of differences
 
 ---
 
+## 2025-12-27: TRC Lookup Table Root Cause Analysis
+
+### Added
+- `trc_curve_investigation.rs` - Deep investigation into TRC differences
+- `cmyk_transforms.rs` - 5 CMYK transform tests
+- `run_fuzz.sh` - Convenience script for fuzzing
+
+### Root Cause Identified
+
+Investigation reveals the SM245B.icc difference is due to **TRC lookup table interpolation**, NOT matrix math or parametric curves.
+
+#### Evidence
+
+| Profile Type | TRC Type | Max Diff | Conclusion |
+|--------------|----------|----------|------------|
+| AdobeRGB.icc | Parametric | 0 | Exact match |
+| sRGB_parametric.icc | Parametric | 0 | Exact match |
+| sRGB_LUT.icc | LUT-based | 0 | Exact match |
+| SM245B.icc | Large LUT | +20 | Interpolation difference |
+| BenQ_GL2450.icc | Large LUT | +5 | Interpolation difference |
+
+#### Pattern Analysis (SM245B.icc)
+
+```
+Input | Browsers | moxcms | Diff
+------|----------|--------|-----
+  0   |    0     |   0    |  +0
+ 128  |   118    |  129   | +11
+ 255  |   235    |  255   | +20
+```
+
+moxcms outputs brighter values for large TRC tables. The difference increases linearly with input value, suggesting different curve interpolation method.
+
+#### Identity Transform Verification
+
+The identity transform (SM245B -> SM245B) works correctly with ~0 diff, confirming:
+1. Matrix math is correct
+2. TRC curve data is parsed correctly
+3. The difference is in how TRC curves are applied during cross-profile transforms
+
+#### Hypothesis
+
+moxcms may be using a different interpolation method for large TRC lookup tables:
+- Linear interpolation vs cubic/spline interpolation
+- Different handling of curve endpoint extrapolation
+- Rounding at different stages of the pipeline
+
+### Test Results
+- 147 tests passing (up from 139)
+- New investigation tests: 3
+- New CMYK tests: 5
+
+---
+
 ## Template for Future Entries
 
 ```markdown
