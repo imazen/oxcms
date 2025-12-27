@@ -6,13 +6,16 @@
 //! Reference: https://facelessuser.github.io/coloraide/colors/xyb/
 //! Source: colorutils-rs by awxkee
 
+#![allow(clippy::type_complexity)]
+#![allow(clippy::needless_range_loop)]
+
 /// XYB color space constants
 mod xyb {
     /// Bias added before cube root in forward transform
-    pub const BIAS: f64 = 0.00379307325527544933;
+    pub const BIAS: f64 = 0.003_793_073_255_275_449_3;
 
     /// Cube root of BIAS, subtracted after cube root
-    pub const BIAS_CBRT: f64 = 0.155954200549248620;
+    pub const BIAS_CBRT: f64 = 0.155_954_200_549_248_63;
 
     /// XYB color value
     #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,7 +44,7 @@ mod xyb {
         }
 
         /// Convert to sRGB values (0-255)
-        pub fn to_srgb(&self) -> (u8, u8, u8) {
+        pub fn to_srgb(self) -> (u8, u8, u8) {
             let r = (linear_to_srgb(self.r.clamp(0.0, 1.0)) * 255.0).round() as u8;
             let g = (linear_to_srgb(self.g.clamp(0.0, 1.0)) * 255.0).round() as u8;
             let b = (linear_to_srgb(self.b.clamp(0.0, 1.0)) * 255.0).round() as u8;
@@ -69,11 +72,7 @@ mod xyb {
 
     /// Cube root function
     fn cbrt(x: f64) -> f64 {
-        if x >= 0.0 {
-            x.cbrt()
-        } else {
-            -(-x).cbrt()
-        }
+        if x >= 0.0 { x.cbrt() } else { -(-x).cbrt() }
     }
 
     /// Convert linear RGB to XYB
@@ -81,9 +80,9 @@ mod xyb {
         // RGB to LMS (with bias and cube root)
         let l_linear = 0.3 * rgb.r + 0.622 * rgb.g + 0.078 * rgb.b;
         let m_linear = 0.23 * rgb.r + 0.692 * rgb.g + 0.078 * rgb.b;
-        let s_linear = 0.24342268924547819 * rgb.r
-            + 0.20476744424496821 * rgb.g
-            + 0.55180986650955360 * rgb.b;
+        let s_linear = 0.243_422_689_245_478_2 * rgb.r
+            + 0.204_767_444_244_968_2 * rgb.g
+            + 0.551_809_866_509_553_5 * rgb.b;
 
         let l_gamma = cbrt(l_linear + BIAS) - BIAS_CBRT;
         let m_gamma = cbrt(m_linear + BIAS) - BIAS_CBRT;
@@ -114,8 +113,7 @@ mod xyb {
             r: 11.031566901960783 * l_linear
                 - 9.866943921568629 * m_linear
                 - 0.16462299647058826 * s_linear,
-            g: -3.254147380392157 * l_linear
-                + 4.418770392156863 * m_linear
+            g: -3.254147380392157 * l_linear + 4.418770392156863 * m_linear
                 - 0.16462299647058826 * s_linear,
             b: -3.6588512862745097 * l_linear
                 + 2.7129230470588235 * m_linear
@@ -189,9 +187,18 @@ fn test_xyb_channel_meaning() {
     let gray = xyb::srgb_to_xyb(128, 128, 128);
 
     eprintln!("Neutral colors (should have X ≈ 0, B ≈ 0):");
-    eprintln!("  White: X={:+.6}, Y={:.6}, B={:+.6}", white.x, white.y, white.b);
-    eprintln!("  Black: X={:+.6}, Y={:.6}, B={:+.6}", black.x, black.y, black.b);
-    eprintln!("  Gray:  X={:+.6}, Y={:.6}, B={:+.6}", gray.x, gray.y, gray.b);
+    eprintln!(
+        "  White: X={:+.6}, Y={:.6}, B={:+.6}",
+        white.x, white.y, white.b
+    );
+    eprintln!(
+        "  Black: X={:+.6}, Y={:.6}, B={:+.6}",
+        black.x, black.y, black.b
+    );
+    eprintln!(
+        "  Gray:  X={:+.6}, Y={:.6}, B={:+.6}",
+        gray.x, gray.y, gray.b
+    );
 
     // Neutral colors should have X ≈ 0 (no red-green opponent)
     assert!(white.x.abs() < 0.001, "White X should be ~0");
@@ -208,7 +215,10 @@ fn test_xyb_channel_meaning() {
 
     eprintln!("\nRed-Green opponent (X channel):");
     eprintln!("  Red:   X={:+.6}, Y={:.6}, B={:+.6}", red.x, red.y, red.b);
-    eprintln!("  Green: X={:+.6}, Y={:.6}, B={:+.6}", green.x, green.y, green.b);
+    eprintln!(
+        "  Green: X={:+.6}, Y={:.6}, B={:+.6}",
+        green.x, green.y, green.b
+    );
 
     // Red should have positive X (L > M), Green should have negative X (M > L)
     assert!(red.x > 0.0, "Red X should be positive (L > M)");
@@ -217,7 +227,10 @@ fn test_xyb_channel_meaning() {
     // Blue (B channel should be high)
     let blue = xyb::srgb_to_xyb(0, 0, 255);
     eprintln!("\nBlue (B channel):");
-    eprintln!("  Blue: X={:+.6}, Y={:.6}, B={:+.6}", blue.x, blue.y, blue.b);
+    eprintln!(
+        "  Blue: X={:+.6}, Y={:.6}, B={:+.6}",
+        blue.x, blue.y, blue.b
+    );
 
     assert!(blue.b > 0.0, "Blue B channel should be positive");
 }
@@ -261,9 +274,18 @@ fn test_xyb_range() {
     eprintln!("  B: [-0.45, 0.45]");
 
     // Verify ranges are reasonable
-    assert!(min_x >= -0.1 && max_x <= 0.1, "X range out of expected bounds");
-    assert!(min_y >= -0.1 && max_y <= 1.0, "Y range out of expected bounds");
-    assert!(min_b >= -0.6 && max_b <= 0.6, "B range out of expected bounds");
+    assert!(
+        min_x >= -0.1 && max_x <= 0.1,
+        "X range out of expected bounds"
+    );
+    assert!(
+        min_y >= -0.1 && max_y <= 1.0,
+        "Y range out of expected bounds"
+    );
+    assert!(
+        min_b >= -0.6 && max_b <= 0.6,
+        "B range out of expected bounds"
+    );
 }
 
 #[test]
@@ -279,7 +301,10 @@ fn test_xyb_linearity() {
         let xyb = xyb::srgb_to_xyb(v, v, v);
         eprintln!("  sRGB {:3} -> Y={:.6}", v, xyb.y);
 
-        assert!(xyb.y >= prev_y, "Y channel should be monotonically increasing");
+        assert!(
+            xyb.y >= prev_y,
+            "Y channel should be monotonically increasing"
+        );
         prev_y = xyb.y;
     }
 }
@@ -331,9 +356,9 @@ fn test_xyb_comprehensive_round_trip() {
                 let xyb = xyb::srgb_to_xyb(r as u8, g as u8, b as u8);
                 let (r2, g2, b2) = xyb::xyb_to_srgb(&xyb);
 
-                let dr = (r as i32 - r2 as i32).abs();
-                let dg = (g as i32 - g2 as i32).abs();
-                let db = (b as i32 - b2 as i32).abs();
+                let dr = (r - r2 as i32).abs();
+                let dg = (g - g2 as i32).abs();
+                let db = (b - b2 as i32).abs();
                 let error = dr.max(dg).max(db);
 
                 if error > 1 {
@@ -346,11 +371,19 @@ fn test_xyb_comprehensive_round_trip() {
     }
 
     eprintln!("Tested {} color values", total_tests);
-    eprintln!("Errors > 1: {} ({:.2}%)", errors_over_1, 100.0 * errors_over_1 as f64 / total_tests as f64);
+    eprintln!(
+        "Errors > 1: {} ({:.2}%)",
+        errors_over_1,
+        100.0 * errors_over_1 as f64 / total_tests as f64
+    );
     eprintln!("Max error: {}", max_error);
 
     // XYB round-trip should be accurate
-    assert!(max_error <= 2, "Max round-trip error too high: {}", max_error);
+    assert!(
+        max_error <= 2,
+        "Max round-trip error too high: {}",
+        max_error
+    );
     assert!(
         (errors_over_1 as f64 / total_tests as f64) < 0.01,
         "Too many large round-trip errors"
@@ -372,9 +405,9 @@ fn test_xyb_comprehensive_round_trip() {
 /// This test documents the bugs. Our implementation is verified via round-trip tests.
 #[test]
 fn test_xyb_vs_colorutils_rs() {
-    use colorutils_rs::Xyb as RefXyb;
     use colorutils_rs::Rgb as RefRgb;
     use colorutils_rs::TransferFunction;
+    use colorutils_rs::Xyb as RefXyb;
 
     eprintln!("\n=== XYB vs colorutils-rs Reference ===\n");
     eprintln!("CRITICAL: colorutils-rs v0.7.5 XYB is completely broken!\n");
@@ -424,9 +457,9 @@ fn test_xyb_vs_colorutils_rs() {
 /// The to_rgb function also appears broken.
 #[test]
 fn test_xyb_colorutils_round_trip() {
-    use colorutils_rs::Xyb as RefXyb;
     use colorutils_rs::Rgb as RefRgb;
     use colorutils_rs::TransferFunction;
+    use colorutils_rs::Xyb as RefXyb;
 
     eprintln!("\n=== colorutils-rs XYB Round-Trip (Bug Documentation) ===\n");
     eprintln!("KNOWN BUG: colorutils-rs v0.7.5 has broken XYB implementation\n");
@@ -464,12 +497,7 @@ fn test_xyb_colorutils_round_trip() {
     // Just documenting the state of colorutils-rs
 
     eprintln!("\nBroken colors (r=0) - all produce same wrong result:");
-    let broken_tests: &[(u8, u8, u8)] = &[
-        (0, 0, 0),
-        (0, 255, 0),
-        (0, 0, 255),
-        (0, 128, 128),
-    ];
+    let broken_tests: &[(u8, u8, u8)] = &[(0, 0, 0), (0, 255, 0), (0, 0, 255), (0, 128, 128)];
 
     for &(r, g, b) in broken_tests {
         let rgb = RefRgb::<u8>::new(r, g, b);

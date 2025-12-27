@@ -5,7 +5,6 @@
 
 use cms_tests::accuracy::{delta_e_2000, srgb_to_lab};
 
-
 /// Test that different rendering intents produce different results
 /// for out-of-gamut colors
 #[test]
@@ -15,9 +14,15 @@ fn test_rendering_intents_produce_different_results() {
 
     let intents = [
         (moxcms::RenderingIntent::Perceptual, "Perceptual"),
-        (moxcms::RenderingIntent::RelativeColorimetric, "Relative Colorimetric"),
+        (
+            moxcms::RenderingIntent::RelativeColorimetric,
+            "Relative Colorimetric",
+        ),
         (moxcms::RenderingIntent::Saturation, "Saturation"),
-        (moxcms::RenderingIntent::AbsoluteColorimetric, "Absolute Colorimetric"),
+        (
+            moxcms::RenderingIntent::AbsoluteColorimetric,
+            "Absolute Colorimetric",
+        ),
     ];
 
     // Use a saturated color that might differ between intents
@@ -39,7 +44,6 @@ fn test_rendering_intents_produce_different_results() {
                 },
             )
             .expect("transform");
-
 
         let mut output = [0u8; 3];
         transform.transform(&test_color, &mut output).unwrap();
@@ -81,15 +85,15 @@ fn test_perceptual_intent_lcms2_comparison() {
     )
     .expect("lcms2 transform");
 
-
-
     // Test a range of colors
     let test_colors: Vec<[u8; 3]> = (0..=255)
         .step_by(51)
         .flat_map(|r| {
-            (0..=255)
-                .step_by(51)
-                .flat_map(move |g| (0..=255).step_by(51).map(move |b| [r as u8, g as u8, b as u8]))
+            (0..=255).step_by(51).flat_map(move |g| {
+                (0..=255)
+                    .step_by(51)
+                    .map(move |b| [r as u8, g as u8, b as u8])
+            })
         })
         .collect();
 
@@ -139,8 +143,6 @@ fn test_relative_colorimetric_intent() {
         )
         .expect("transform");
 
-
-
     // Identity transform should preserve all colors
     let test_colors = [
         [0u8, 0, 0],
@@ -182,8 +184,6 @@ fn test_absolute_colorimetric_intent() {
             },
         )
         .expect("transform");
-
-
 
     // Absolute colorimetric should also preserve colors for same-profile transform
     let test_colors = [
@@ -227,8 +227,6 @@ fn test_saturation_intent() {
         )
         .expect("transform");
 
-
-
     // Saturation intent should also work as identity for same-profile
     let test_colors = [
         [0u8, 0, 0],
@@ -261,10 +259,26 @@ fn test_all_intents_lcms2_comparison() {
     let lcms_srgb = lcms2::Profile::new_srgb();
 
     let intents = [
-        (moxcms::RenderingIntent::Perceptual, lcms2::Intent::Perceptual, "Perceptual"),
-        (moxcms::RenderingIntent::RelativeColorimetric, lcms2::Intent::RelativeColorimetric, "Relative"),
-        (moxcms::RenderingIntent::Saturation, lcms2::Intent::Saturation, "Saturation"),
-        (moxcms::RenderingIntent::AbsoluteColorimetric, lcms2::Intent::AbsoluteColorimetric, "Absolute"),
+        (
+            moxcms::RenderingIntent::Perceptual,
+            lcms2::Intent::Perceptual,
+            "Perceptual",
+        ),
+        (
+            moxcms::RenderingIntent::RelativeColorimetric,
+            lcms2::Intent::RelativeColorimetric,
+            "Relative",
+        ),
+        (
+            moxcms::RenderingIntent::Saturation,
+            lcms2::Intent::Saturation,
+            "Saturation",
+        ),
+        (
+            moxcms::RenderingIntent::AbsoluteColorimetric,
+            lcms2::Intent::AbsoluteColorimetric,
+            "Absolute",
+        ),
     ];
 
     eprintln!("\nAll intents lcms2 comparison (sRGB identity):");
@@ -291,13 +305,13 @@ fn test_all_intents_lcms2_comparison() {
         )
         .expect("lcms2 transform");
 
-
-
         let test_color = [200u8, 100, 50];
         let mut mox_output = [0u8; 3];
         let mut lcms_output = [0u8; 3];
 
-        mox_transform.transform(&test_color, &mut mox_output).unwrap();
+        mox_transform
+            .transform(&test_color, &mut mox_output)
+            .unwrap();
         lcms_transform.transform_pixels(&test_color, &mut lcms_output);
 
         let max_diff = (0..3)
@@ -333,12 +347,7 @@ fn test_black_point_compensation_option() {
     let srgb = moxcms::ColorProfile::new_srgb();
 
     let _transform = srgb
-        .create_transform_8bit(
-            moxcms::Layout::Rgb,
-            &srgb,
-            moxcms::Layout::Rgb,
-            options,
-        )
+        .create_transform_8bit(moxcms::Layout::Rgb, &srgb, moxcms::Layout::Rgb, options)
         .expect("transform with options");
 
     eprintln!("\nBlack point compensation option:");

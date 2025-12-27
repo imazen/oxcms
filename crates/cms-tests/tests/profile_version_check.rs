@@ -47,15 +47,25 @@ fn check_profile_version() {
     if data.len() >= 128 {
         let version_major = data[8];
         let version_minor = data[9];
-        eprintln!("Profile version (raw): {}.{}", version_major, version_minor >> 4);
+        eprintln!(
+            "Profile version (raw): {}.{}",
+            version_major,
+            version_minor >> 4
+        );
 
         // Profile/Device class at offset 12-15
         let class = &data[12..16];
-        eprintln!("Profile class (raw): {:?}", std::str::from_utf8(class).unwrap_or("?"));
+        eprintln!(
+            "Profile class (raw): {:?}",
+            std::str::from_utf8(class).unwrap_or("?")
+        );
 
         // Color space at offset 16-19
         let color_space = &data[16..20];
-        eprintln!("Color space (raw): {:?}", std::str::from_utf8(color_space).unwrap_or("?"));
+        eprintln!(
+            "Color space (raw): {:?}",
+            std::str::from_utf8(color_space).unwrap_or("?")
+        );
 
         // PCS at offset 20-23
         let pcs = &data[20..24];
@@ -67,15 +77,15 @@ fn check_profile_version() {
     eprintln!("SM245B colorants sum to ~D65, but white point tag is D50.");
     eprintln!("This is common in V2 profiles where chromatic adaptation");
     eprintln!("may not be applied to the colorants.");
-    eprintln!("");
+    eprintln!();
     eprintln!("For V2 profiles:");
     eprintln!("  - Colorants may be in native (device) white point space");
     eprintln!("  - CMM should apply chromatic adaptation if needed");
-    eprintln!("");
+    eprintln!();
     eprintln!("For V4 profiles:");
     eprintln!("  - Colorants MUST be adapted to D50 PCS");
     eprintln!("  - No additional adaptation needed");
-    eprintln!("");
+    eprintln!();
     eprintln!("skcms appears to detect this and apply chromatic adaptation.");
     eprintln!("moxcms is NOT applying chromatic adaptation, treating colorants as D50.");
 }
@@ -114,8 +124,14 @@ fn test_v4_profile() {
             let sum_x = profile.red_colorant.x + profile.green_colorant.x + profile.blue_colorant.x;
             let sum_y = profile.red_colorant.y + profile.green_colorant.y + profile.blue_colorant.y;
             let sum_z = profile.red_colorant.z + profile.green_colorant.z + profile.blue_colorant.z;
-            eprintln!("  Colorants sum: [{:.4}, {:.4}, {:.4}]", sum_x, sum_y, sum_z);
-            eprintln!("  White point: [{:.4}, {:.4}, {:.4}]", profile.white_point.x, profile.white_point.y, profile.white_point.z);
+            eprintln!(
+                "  Colorants sum: [{:.4}, {:.4}, {:.4}]",
+                sum_x, sum_y, sum_z
+            );
+            eprintln!(
+                "  White point: [{:.4}, {:.4}, {:.4}]",
+                profile.white_point.x, profile.white_point.y, profile.white_point.z
+            );
 
             let match_wp = (sum_x - profile.white_point.x).abs() < 0.01
                 && (sum_y - profile.white_point.y).abs() < 0.01

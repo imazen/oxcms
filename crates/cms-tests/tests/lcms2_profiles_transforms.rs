@@ -33,7 +33,7 @@ fn test_create_srgb_profile() {
     // sRGB should have version 2.x or 4.x
     let version = srgb.version();
     assert!(
-        version >= 2.0 && version < 5.0,
+        (2.0..5.0).contains(&version),
         "sRGB version should be 2.x-4.x, got {}",
         version
     );
@@ -490,7 +490,7 @@ fn test_gray_transform() {
         transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
 
         // Allow 2 levels error due to rounding
-        let err = (output[0] as i32 - i as i32).abs();
+        let err = (output[0] as i32 - i).abs();
         assert!(
             err <= 2,
             "Gray identity at {}: got {}, error {}",
@@ -639,11 +639,7 @@ fn test_white_point_preservation() {
 
     // Y should be close to the sum of X+Y+Z ≈ white point luminance
     let y = xyz_out[1];
-    assert!(
-        (y - 1.0).abs() < 0.01,
-        "White Y should be ~1.0, got {}",
-        y
-    );
+    assert!((y - 1.0).abs() < 0.01, "White Y should be ~1.0, got {}", y);
 
     // Verify x,y chromaticity
     let sum = xyz_out[0] + xyz_out[1] + xyz_out[2];

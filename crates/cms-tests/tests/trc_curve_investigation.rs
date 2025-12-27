@@ -1,4 +1,5 @@
 //! TRC Curve Investigation
+#![allow(clippy::needless_range_loop)]
 //!
 //! Deep investigation into TRC curve interpolation differences between
 //! moxcms and browser CMS (skcms/qcms).
@@ -123,7 +124,10 @@ fn investigate_sm245b_trc() {
         );
     }
 
-    eprintln!("\nMax moxcms vs browser diff: {} at input {}", max_mox_diff, worst_input);
+    eprintln!(
+        "\nMax moxcms vs browser diff: {} at input {}",
+        max_mox_diff, worst_input
+    );
 
     // Now test high values in detail (where we saw the most difference)
     eprintln!("\nHigh value range (220-255):");
@@ -270,13 +274,17 @@ fn compare_trc_across_profiles() {
                 1,
             );
 
-            let browser_avg = ((qcms_out[0] as i32 + skcms_out[0] as i32) / 2) as i32;
+            let browser_avg = (qcms_out[0] as i32 + skcms_out[0] as i32) / 2;
             let diff = moxcms_out[0] as i32 - browser_avg;
             diffs.push(diff);
         }
 
         let max_diff = diffs.iter().map(|d| d.abs()).max().unwrap();
-        let diff_str: String = diffs.iter().map(|d| format!("{:+}", d)).collect::<Vec<_>>().join(", ");
+        let diff_str: String = diffs
+            .iter()
+            .map(|d| format!("{:+}", d))
+            .collect::<Vec<_>>()
+            .join(", ");
 
         eprintln!(
             "{}: max={:2}, pattern=[{}]",
@@ -329,7 +337,7 @@ fn test_identity_trc_isolation() {
         let mut out = [0u8; 3];
         identity_transform.transform(&color, &mut out).unwrap();
 
-        let diff = out[0] as i32 - v as i32;
+        let diff = out[0] as i32 - v;
         eprintln!("  {:3} |  {:3}   | {:+3}", v, out[0], diff);
     }
 

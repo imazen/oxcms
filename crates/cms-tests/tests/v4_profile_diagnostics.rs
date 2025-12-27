@@ -1,4 +1,5 @@
 //! Diagnostic test for ICC v4 profile transform differences
+#![allow(clippy::needless_range_loop)]
 //!
 //! Analyzes the parity differences for ICC v4 sRGB profiles between
 //! moxcms and lcms2, and compares against browser consensus (skcms/qcms).
@@ -23,13 +24,13 @@ fn testdata_dir() -> std::path::PathBuf {
 /// Standard test colors covering the full gamut
 const TEST_COLORS_RGB8: &[[u8; 3]] = &[
     // Primaries
-    [255, 0, 0],     // Red
-    [0, 255, 0],     // Green
-    [0, 0, 255],     // Blue
+    [255, 0, 0], // Red
+    [0, 255, 0], // Green
+    [0, 0, 255], // Blue
     // Secondaries
-    [255, 255, 0],   // Yellow
-    [255, 0, 255],   // Magenta
-    [0, 255, 255],   // Cyan
+    [255, 255, 0], // Yellow
+    [255, 0, 255], // Magenta
+    [0, 255, 255], // Cyan
     // Neutrals
     [0, 0, 0],       // Black
     [128, 128, 128], // Mid gray
@@ -42,9 +43,9 @@ const TEST_COLORS_RGB8: &[[u8; 3]] = &[
     [144, 238, 144], // Light green
     [173, 216, 230], // Light blue
     // Deep colors
-    [128, 0, 0],     // Maroon
-    [0, 128, 0],     // Dark green
-    [0, 0, 128],     // Navy
+    [128, 0, 0], // Maroon
+    [0, 128, 0], // Dark green
+    [0, 0, 128], // Navy
     // Grays
     [32, 32, 32],
     [64, 64, 64],
@@ -194,7 +195,12 @@ fn analyze_profile(profile_path: &Path) -> Option<ProfileAnalysis> {
 
     let skcms_profile_ref = skcms_profile.as_ref();
     let qcms_transform = qcms_profile.as_ref().and_then(|p| {
-        qcms::Transform::new(p, &srgb_qcms, qcms::DataType::RGB8, qcms::Intent::Perceptual)
+        qcms::Transform::new(
+            p,
+            &srgb_qcms,
+            qcms::DataType::RGB8,
+            qcms::Intent::Perceptual,
+        )
     });
 
     // Transform all test colors
@@ -286,11 +292,7 @@ fn analyze_profile(profile_path: &Path) -> Option<ProfileAnalysis> {
         // Browser consensus: if skcms and qcms agree within 1, use their value
         let browser_consensus = if let (Some(sk), Some(qc)) = (skcms_out, qcms_out) {
             let agree = (0..3).all(|c| (sk[c] as i32 - qc[c] as i32).abs() <= 1);
-            if agree {
-                Some(sk)
-            } else {
-                None
-            }
+            if agree { Some(sk) } else { None }
         } else {
             None
         };
@@ -352,7 +354,10 @@ fn test_v4_profile_diagnostics() {
             continue;
         }
 
-        eprintln!("\n--- {} ---\n", profile_path.file_name().unwrap().to_string_lossy());
+        eprintln!(
+            "\n--- {} ---\n",
+            profile_path.file_name().unwrap().to_string_lossy()
+        );
 
         let analysis = match analyze_profile(profile_path) {
             Some(a) => a,
@@ -369,7 +374,8 @@ fn test_v4_profile_diagnostics() {
 
         eprintln!("\nChannel-specific differences (moxcms vs lcms2):");
         for stats in &analysis.channel_diff_stats {
-            eprintln!("  {}: max={}, mean={:.2}, count={}/{}",
+            eprintln!(
+                "  {}: max={}, mean={:.2}, count={}/{}",
                 stats.channel_name,
                 stats.max_diff,
                 stats.mean_diff(),
@@ -379,14 +385,17 @@ fn test_v4_profile_diagnostics() {
         }
 
         eprintln!("\nBrowser consensus analysis:");
-        eprintln!("  Times moxcms matches browsers better than lcms2: {}/{}",
+        eprintln!(
+            "  Times moxcms matches browsers better than lcms2: {}/{}",
             analysis.moxcms_better_count,
             analysis.comparisons.len()
         );
 
         // Find colors with largest differences
         eprintln!("\nColors with largest moxcms vs lcms2 differences:");
-        let mut sorted_comps: Vec<_> = analysis.comparisons.iter()
+        let mut sorted_comps: Vec<_> = analysis
+            .comparisons
+            .iter()
             .filter_map(|c| c.moxcms_diff.map(|d| (c, d)))
             .collect();
         sorted_comps.sort_by_key(|(_, diff)| -diff);
@@ -399,7 +408,8 @@ fn test_v4_profile_diagnostics() {
             let (ch, _ch_diff) = cmp.max_diff_channel().unwrap_or((0, 0));
             let ch_name = ["R", "G", "B"][ch];
 
-            eprintln!("  Input {:?} -> lcms2 {:?}, moxcms {:?} (diff={}, max in {})",
+            eprintln!(
+                "  Input {:?} -> lcms2 {:?}, moxcms {:?} (diff={}, max in {})",
                 cmp.input,
                 cmp.lcms2,
                 cmp.moxcms.unwrap(),
@@ -409,14 +419,15 @@ fn test_v4_profile_diagnostics() {
 
             // Show browser outputs if available
             if let Some(consensus) = cmp.browser_consensus {
-                eprintln!("    Browser consensus: {:?} (diff from lcms2: {})",
+                eprintln!(
+                    "    Browser consensus: {:?} (diff from lcms2: {})",
                     consensus,
                     cmp.browser_diff_from_lcms2.unwrap_or(0)
                 );
             } else if cmp.skcms.is_some() || cmp.qcms.is_some() {
-                eprintln!("    skcms: {:?}, qcms: {:?} (no consensus)",
-                    cmp.skcms,
-                    cmp.qcms
+                eprintln!(
+                    "    skcms: {:?}, qcms: {:?} (no consensus)",
+                    cmp.skcms, cmp.qcms
                 );
             }
         }
@@ -436,9 +447,18 @@ fn test_v4_profile_structure() {
 
     let testdata = testdata_dir();
     let v4_profiles = [
-        ("sRGB_ICC_v4_Appearance.icc", testdata.join("profiles/skcms/color.org/sRGB_ICC_v4_Appearance.icc")),
-        ("sRGB_v4_ICC_preference.icc", testdata.join("profiles/skcms/color.org/sRGB_v4_ICC_preference.icc")),
-        ("sRGB_ICC_v4_beta.icc", testdata.join("profiles/skcms/misc/sRGB_ICC_v4_beta.icc")),
+        (
+            "sRGB_ICC_v4_Appearance.icc",
+            testdata.join("profiles/skcms/color.org/sRGB_ICC_v4_Appearance.icc"),
+        ),
+        (
+            "sRGB_v4_ICC_preference.icc",
+            testdata.join("profiles/skcms/color.org/sRGB_v4_ICC_preference.icc"),
+        ),
+        (
+            "sRGB_ICC_v4_beta.icc",
+            testdata.join("profiles/skcms/misc/sRGB_ICC_v4_beta.icc"),
+        ),
     ];
 
     for (name, profile_path) in &v4_profiles {
@@ -469,20 +489,48 @@ fn test_v4_profile_structure() {
         let has_b_trc = data.windows(4).any(|w| w == b"bTRC");
 
         eprintln!("  Tags present:");
-        if has_a2b0 { eprintln!("    A2B0 (Device to PCS - Perceptual)"); }
-        if has_b2a0 { eprintln!("    B2A0 (PCS to Device - Perceptual)"); }
-        if has_a2b1 { eprintln!("    A2B1 (Device to PCS - Colorimetric)"); }
-        if has_b2a1 { eprintln!("    B2A1 (PCS to Device - Colorimetric)"); }
-        if has_a2b2 { eprintln!("    A2B2 (Device to PCS - Saturation)"); }
-        if has_b2a2 { eprintln!("    B2A2 (PCS to Device - Saturation)"); }
-        if has_chad { eprintln!("    chad (Chromatic Adaptation)"); }
-        if has_wtpt { eprintln!("    wtpt (White Point)"); }
-        if has_r_xyz { eprintln!("    rXYZ (Red Colorant)"); }
-        if has_g_xyz { eprintln!("    gXYZ (Green Colorant)"); }
-        if has_b_xyz { eprintln!("    bXYZ (Blue Colorant)"); }
-        if has_r_trc { eprintln!("    rTRC (Red TRC)"); }
-        if has_g_trc { eprintln!("    gTRC (Green TRC)"); }
-        if has_b_trc { eprintln!("    bTRC (Blue TRC)"); }
+        if has_a2b0 {
+            eprintln!("    A2B0 (Device to PCS - Perceptual)");
+        }
+        if has_b2a0 {
+            eprintln!("    B2A0 (PCS to Device - Perceptual)");
+        }
+        if has_a2b1 {
+            eprintln!("    A2B1 (Device to PCS - Colorimetric)");
+        }
+        if has_b2a1 {
+            eprintln!("    B2A1 (PCS to Device - Colorimetric)");
+        }
+        if has_a2b2 {
+            eprintln!("    A2B2 (Device to PCS - Saturation)");
+        }
+        if has_b2a2 {
+            eprintln!("    B2A2 (PCS to Device - Saturation)");
+        }
+        if has_chad {
+            eprintln!("    chad (Chromatic Adaptation)");
+        }
+        if has_wtpt {
+            eprintln!("    wtpt (White Point)");
+        }
+        if has_r_xyz {
+            eprintln!("    rXYZ (Red Colorant)");
+        }
+        if has_g_xyz {
+            eprintln!("    gXYZ (Green Colorant)");
+        }
+        if has_b_xyz {
+            eprintln!("    bXYZ (Blue Colorant)");
+        }
+        if has_r_trc {
+            eprintln!("    rTRC (Red TRC)");
+        }
+        if has_g_trc {
+            eprintln!("    gTRC (Green TRC)");
+        }
+        if has_b_trc {
+            eprintln!("    bTRC (Blue TRC)");
+        }
 
         let profile_type = if has_a2b0 || has_b2a0 || has_a2b1 || has_b2a1 {
             "LUT-based (uses A2B/B2A tables)"
@@ -595,14 +643,19 @@ fn test_v4_color_range_analysis() {
                 total_diff += mox_diff as i64;
                 max_diff = max_diff.max(mox_diff);
 
-                eprintln!("  Gray({}) -> lcms2={:?}, moxcms={:?}, skcms={:?}, diff={}",
-                    val, lcms2_out, moxcms_out, skcms_out, mox_diff);
+                eprintln!(
+                    "  Gray({}) -> lcms2={:?}, moxcms={:?}, skcms={:?}, diff={}",
+                    val, lcms2_out, moxcms_out, skcms_out, mox_diff
+                );
             }
         }
 
         if diff_count > 0 {
-            eprintln!("  Range stats: max_diff={}, mean_diff={:.2}",
-                max_diff, total_diff as f64 / diff_count as f64);
+            eprintln!(
+                "  Range stats: max_diff={}, mean_diff={:.2}",
+                max_diff,
+                total_diff as f64 / diff_count as f64
+            );
         } else {
             eprintln!("  No differences found");
         }

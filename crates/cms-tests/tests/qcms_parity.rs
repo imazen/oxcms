@@ -27,12 +27,8 @@ fn test_qcms_srgb_identity() {
     let srgb = qcms::Profile::new_sRGB();
 
     // Create identity transform
-    let transform = qcms::Transform::new(
-        &srgb,
-        &srgb,
-        qcms::DataType::RGB8,
-        qcms::Intent::Perceptual,
-    );
+    let transform =
+        qcms::Transform::new(&srgb, &srgb, qcms::DataType::RGB8, qcms::Intent::Perceptual);
 
     assert!(transform.is_some(), "Should create identity transform");
     let transform = transform.unwrap();
@@ -64,7 +60,8 @@ fn test_qcms_srgb_identity() {
         assert!(
             diff <= 1,
             "Identity transform should preserve colors: {:?} -> {:?}",
-            color, &data[..3]
+            color,
+            &data[..3]
         );
     }
 }
@@ -241,12 +238,12 @@ fn test_all_three_cms_comparison() {
                 lcms_transform.transform_pixels(&input, &mut lcms_output);
 
                 for i in 0..3 {
-                    qcms_vs_mox_max = qcms_vs_mox_max
-                        .max((qcms_data[i] as i32 - mox_output[i] as i32).abs());
-                    qcms_vs_lcms_max = qcms_vs_lcms_max
-                        .max((qcms_data[i] as i32 - lcms_output[i] as i32).abs());
-                    mox_vs_lcms_max = mox_vs_lcms_max
-                        .max((mox_output[i] as i32 - lcms_output[i] as i32).abs());
+                    qcms_vs_mox_max =
+                        qcms_vs_mox_max.max((qcms_data[i] as i32 - mox_output[i] as i32).abs());
+                    qcms_vs_lcms_max =
+                        qcms_vs_lcms_max.max((qcms_data[i] as i32 - lcms_output[i] as i32).abs());
+                    mox_vs_lcms_max =
+                        mox_vs_lcms_max.max((mox_output[i] as i32 - lcms_output[i] as i32).abs());
                 }
             }
         }
@@ -317,10 +314,10 @@ fn test_qcms_rgba_transform() {
 
     // Test with various alpha values
     let test_cases = [
-        [255u8, 0, 0, 0],     // Red, transparent
-        [255, 0, 0, 128],     // Red, 50% alpha
-        [255, 0, 0, 255],     // Red, opaque
-        [128, 128, 128, 64],  // Gray, 25% alpha
+        [255u8, 0, 0, 0],    // Red, transparent
+        [255, 0, 0, 128],    // Red, 50% alpha
+        [255, 0, 0, 255],    // Red, opaque
+        [128, 128, 128, 64], // Gray, 25% alpha
     ];
 
     for input in &test_cases {
@@ -329,15 +326,11 @@ fn test_qcms_rgba_transform() {
 
         eprintln!(
             "  RGBA({}, {}, {}, {}) -> ({}, {}, {}, {})",
-            input[0], input[1], input[2], input[3],
-            data[0], data[1], data[2], data[3]
+            input[0], input[1], input[2], input[3], data[0], data[1], data[2], data[3]
         );
 
         // Alpha should be preserved
-        assert_eq!(
-            input[3], data[3],
-            "Alpha channel should be preserved"
-        );
+        assert_eq!(input[3], data[3], "Alpha channel should be preserved");
     }
 }
 
@@ -449,13 +442,9 @@ fn test_qcms_icc_profile_parsing() {
 #[test]
 fn test_qcms_determinism() {
     let srgb = qcms::Profile::new_sRGB();
-    let transform = qcms::Transform::new(
-        &srgb,
-        &srgb,
-        qcms::DataType::RGB8,
-        qcms::Intent::Perceptual,
-    )
-    .expect("transform");
+    let transform =
+        qcms::Transform::new(&srgb, &srgb, qcms::DataType::RGB8, qcms::Intent::Perceptual)
+            .expect("transform");
 
     eprintln!("\nqcms determinism:");
 
@@ -487,21 +476,33 @@ fn test_qcms_all_intents_vs_lcms2() {
     let lcms_srgb = lcms2::Profile::new_srgb();
 
     let intents = [
-        (qcms::Intent::Perceptual, lcms2::Intent::Perceptual, "Perceptual"),
-        (qcms::Intent::RelativeColorimetric, lcms2::Intent::RelativeColorimetric, "Relative"),
-        (qcms::Intent::Saturation, lcms2::Intent::Saturation, "Saturation"),
-        (qcms::Intent::AbsoluteColorimetric, lcms2::Intent::AbsoluteColorimetric, "Absolute"),
+        (
+            qcms::Intent::Perceptual,
+            lcms2::Intent::Perceptual,
+            "Perceptual",
+        ),
+        (
+            qcms::Intent::RelativeColorimetric,
+            lcms2::Intent::RelativeColorimetric,
+            "Relative",
+        ),
+        (
+            qcms::Intent::Saturation,
+            lcms2::Intent::Saturation,
+            "Saturation",
+        ),
+        (
+            qcms::Intent::AbsoluteColorimetric,
+            lcms2::Intent::AbsoluteColorimetric,
+            "Absolute",
+        ),
     ];
 
     eprintln!("\nqcms vs lcms2 all intents:");
 
     for (qcms_intent, lcms_intent, name) in &intents {
-        let qcms_transform = qcms::Transform::new(
-            &qcms_srgb,
-            &qcms_srgb,
-            qcms::DataType::RGB8,
-            *qcms_intent,
-        );
+        let qcms_transform =
+            qcms::Transform::new(&qcms_srgb, &qcms_srgb, qcms::DataType::RGB8, *qcms_intent);
 
         let lcms_transform = lcms2::Transform::new(
             &lcms_srgb,
@@ -528,7 +529,10 @@ fn test_qcms_all_intents_vs_lcms2() {
 
                 eprintln!(
                     "  {}: qcms {:?}, lcms2 {:?}, diff: {}",
-                    name, &qcms_data[..3], lcms_output, max_diff
+                    name,
+                    &qcms_data[..3],
+                    lcms_output,
+                    max_diff
                 );
 
                 assert!(

@@ -239,6 +239,12 @@ extern "C" {
 ///
 /// Returns true if parsing succeeded.
 /// The buffer must remain valid for the lifetime of the profile.
+///
+/// # Safety
+///
+/// - `buf` must be a valid pointer to at least `len` bytes of ICC profile data
+/// - `profile` must be a valid pointer to an uninitialized `skcms_ICCProfile`
+/// - The buffer must remain valid for the lifetime of the profile
 #[inline]
 pub unsafe fn skcms_Parse(buf: *const c_void, len: usize, profile: *mut skcms_ICCProfile) -> bool {
     let priority = [0i32, 1i32];
@@ -263,6 +269,7 @@ pub fn srgb_profile() -> &'static skcms_ICCProfile {
 }
 
 /// Transform pixels between color profiles (u8 version)
+#[allow(clippy::too_many_arguments)]
 pub fn transform(
     src: &[u8],
     src_fmt: skcms_PixelFormat,
@@ -290,6 +297,7 @@ pub fn transform(
 }
 
 /// Transform pixels between color profiles (u16 version)
+#[allow(clippy::too_many_arguments)]
 pub fn transform_u16(
     src: &[u16],
     src_fmt: skcms_PixelFormat,
@@ -317,6 +325,7 @@ pub fn transform_u16(
 }
 
 /// Transform pixels between color profiles (f32 version)
+#[allow(clippy::too_many_arguments)]
 pub fn transform_f32(
     src: &[f32],
     src_fmt: skcms_PixelFormat,

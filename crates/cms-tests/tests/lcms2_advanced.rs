@@ -8,6 +8,9 @@
 //!
 //! Original source: https://github.com/mm2/Little-CMS/blob/master/testbed/testcms2.c
 
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::type_complexity)]
+
 use lcms2::{CIExyY, CIExyYTRIPLE, Flags, Intent, PixelFormat, Profile, ToneCurve};
 use std::slice;
 
@@ -265,7 +268,9 @@ fn test_gamut_check_same_profile() {
     let srgb = Profile::new_srgb();
 
     // Set alarm codes for out-of-gamut colors (needs 16 channels)
-    let alarm_codes: [u16; 16] = [0xDEAD, 0xBABE, 0xFACE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let alarm_codes: [u16; 16] = [
+        0xDEAD, 0xBABE, 0xFACE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
     #[allow(deprecated)]
     lcms2::Transform::<[f32; 3], [f32; 3]>::set_global_alarm_codes(alarm_codes);
 
@@ -381,7 +386,7 @@ fn test_lab_v2_profile() {
     // Version should be 2.x
     let version = lab2.version();
     assert!(
-        version >= 2.0 && version < 3.0,
+        (2.0..3.0).contains(&version),
         "Lab V2 should be version 2.x, got {}",
         version
     );
@@ -402,7 +407,7 @@ fn test_lab_v4_profile() {
     // Version should be 4.x
     let version = lab4.version();
     assert!(
-        version >= 4.0 && version < 5.0,
+        (4.0..5.0).contains(&version),
         "Lab V4 should be version 4.x, got {}",
         version
     );
@@ -426,14 +431,14 @@ fn test_lab_identity_transform() {
 
     // Test several Lab values
     let test_cases = [
-        [0.0f32, 0.0, 0.0],    // Black
-        [100.0, 0.0, 0.0],     // White
-        [50.0, 0.0, 0.0],      // Mid-gray
-        [50.0, 50.0, 0.0],     // Reddish
-        [50.0, -50.0, 0.0],    // Greenish
-        [50.0, 0.0, 50.0],     // Yellowish
-        [50.0, 0.0, -50.0],    // Bluish
-        [75.0, 25.0, -25.0],   // Arbitrary
+        [0.0f32, 0.0, 0.0],  // Black
+        [100.0, 0.0, 0.0],   // White
+        [50.0, 0.0, 0.0],    // Mid-gray
+        [50.0, 50.0, 0.0],   // Reddish
+        [50.0, -50.0, 0.0],  // Greenish
+        [50.0, 0.0, 50.0],   // Yellowish
+        [50.0, 0.0, -50.0],  // Bluish
+        [75.0, 25.0, -25.0], // Arbitrary
     ];
 
     for lab_in in test_cases {
@@ -622,19 +627,19 @@ fn check_lab_identity(lab1: &Profile, lab2: &Profile, name: &str) {
         PixelFormat::Lab_DBL,
         Intent::RelativeColorimetric,
     )
-    .expect(&format!("{} transform creation failed", name));
+    .unwrap_or_else(|_| panic!("{} transform creation failed", name));
 
     // Test several Lab values
     let test_cases = [
-        [0.0f64, 0.0, 0.0],     // Black
-        [100.0, 0.0, 0.0],      // White
-        [50.0, 0.0, 0.0],       // Mid-gray
-        [50.0, 50.0, 0.0],      // Reddish
-        [50.0, -50.0, 0.0],     // Greenish
-        [50.0, 0.0, 50.0],      // Yellowish
-        [50.0, 0.0, -50.0],     // Bluish
-        [75.0, 25.0, -25.0],    // Arbitrary color
-        [25.0, -30.0, 40.0],    // Another arbitrary
+        [0.0f64, 0.0, 0.0],  // Black
+        [100.0, 0.0, 0.0],   // White
+        [50.0, 0.0, 0.0],    // Mid-gray
+        [50.0, 50.0, 0.0],   // Reddish
+        [50.0, -50.0, 0.0],  // Greenish
+        [50.0, 0.0, 50.0],   // Yellowish
+        [50.0, 0.0, -50.0],  // Bluish
+        [75.0, 25.0, -25.0], // Arbitrary color
+        [25.0, -30.0, 40.0], // Another arbitrary
     ];
 
     for lab_in in test_cases {
@@ -915,7 +920,8 @@ fn test_xyz_identity_float() {
 fn test_gray_input_to_lab() {
     // Create a gray profile with gamma 2.2
     let gamma22 = ToneCurve::new(2.2);
-    let gray = Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
+    let gray =
+        Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
 
     let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
         .expect("Lab profile creation failed");
@@ -931,12 +937,7 @@ fn test_gray_input_to_lab() {
 
     // Test known values: gray input -> expected L* value
     // (0, 0), (125, 52.768), (200, 81.069), (255, 100.0)
-    let test_cases = [
-        (0u8, 0.0f64),
-        (125, 52.768),
-        (200, 81.069),
-        (255, 100.0),
-    ];
+    let test_cases = [(0u8, 0.0f64), (125, 52.768), (200, 81.069), (255, 100.0)];
 
     for (gray_in, expected_l) in test_cases {
         let input = [gray_in];
@@ -973,7 +974,8 @@ fn test_lab_to_gray_output() {
 
     // Create a gray profile with gamma 2.2
     let gamma22 = ToneCurve::new(2.2);
-    let gray = Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
+    let gray =
+        Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
 
     let transform = lcms2::Transform::<[f64; 3], [u8; 1]>::new(
         &lab,
@@ -986,12 +988,7 @@ fn test_lab_to_gray_output() {
 
     // Test known values: L* input -> expected gray value
     // (0, 0), (52.768, 125), (81.069, 200), (100.0, 255)
-    let test_cases = [
-        (0.0f64, 0u8),
-        (52.768, 125),
-        (81.069, 200),
-        (100.0, 255),
-    ];
+    let test_cases = [(0.0f64, 0u8), (52.768, 125), (81.069, 200), (100.0, 255)];
 
     for (l_in, expected_gray) in test_cases {
         let input = [l_in, 0.0, 0.0];
@@ -1015,7 +1012,8 @@ fn test_lab_to_gray_output() {
 fn test_linear_gray_to_lab() {
     // Create a linear gray profile (gamma 1.0)
     let linear = ToneCurve::new(1.0);
-    let gray = Profile::new_gray(&d50_white_point(), &linear).expect("Gray profile creation failed");
+    let gray =
+        Profile::new_gray(&d50_white_point(), &linear).expect("Gray profile creation failed");
 
     let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
         .expect("Lab profile creation failed");
@@ -1033,12 +1031,7 @@ fn test_linear_gray_to_lab() {
     // The L* formula is: L* = 116 * (Y)^(1/3) - 16 for Y > 0.008856
     // For Y = 125/255 = 0.49019: L* = 116 * 0.49019^(1/3) - 16 = 75.463
     // For Y = 200/255 = 0.78431: L* = 116 * 0.78431^(1/3) - 16 = 90.961
-    let test_cases = [
-        (0u8, 0.0f64),
-        (125, 75.463),
-        (200, 90.961),
-        (255, 100.0),
-    ];
+    let test_cases = [(0u8, 0.0f64), (125, 75.463), (200, 90.961), (255, 100.0)];
 
     for (gray_in, expected_l) in test_cases {
         let input = [gray_in];
@@ -1132,7 +1125,8 @@ fn test_custom_rgb_identity_8bit() {
     let gamma = ToneCurve::new(2.19921875);
     let curves = [&gamma, &gamma, &gamma];
 
-    let above = Profile::new_rgb(&d65, &above_primaries, &curves).expect("Above RGB creation failed");
+    let above =
+        Profile::new_rgb(&d65, &above_primaries, &curves).expect("Above RGB creation failed");
 
     let transform = lcms2::Transform::<[u8; 3], [u8; 3]>::new(
         &above,
@@ -1179,11 +1173,11 @@ fn build_srgb_gamma() -> ToneCurve {
     // Y = (aX + b)^Gamma | X >= d
     // Y = cX             | X < d
     let params = [
-        2.4,            // gamma
-        1.0 / 1.055,    // a
-        0.055 / 1.055,  // b
-        1.0 / 12.92,    // c
-        0.04045,        // d
+        2.4,           // gamma
+        1.0 / 1.055,   // a
+        0.055 / 1.055, // b
+        1.0 / 12.92,   // c
+        0.04045,       // d
     ];
     ToneCurve::new_parametric(4, &params).expect("sRGB gamma creation failed")
 }
@@ -1222,7 +1216,7 @@ fn test_srgb_gamma_values() {
     // sRGB EOTF: for x < 0.04045, y = x/12.92; otherwise y = ((x + 0.055)/1.055)^2.4
     let test_points = [
         (0.0f32, 0.0f32),
-        (0.04045, 0.04045 / 12.92),  // At threshold
+        (0.04045, 0.04045 / 12.92), // At threshold
         (0.5, ((0.5 + 0.055) / 1.055f32).powf(2.4)),
         (1.0, 1.0),
     ];
@@ -1272,13 +1266,16 @@ fn test_degenerated_curve_reverse() {
     let reversed = curve.reversed();
 
     // The reversed curve should exist and be valid
-    assert!(reversed.is_monotonic(), "Reversed degenerated curve should be monotonic");
+    assert!(
+        reversed.is_monotonic(),
+        "Reversed degenerated curve should be monotonic"
+    );
 
     // Test some points
     // For a degenerated curve, the reverse maps the flat output regions to single input values
     let y_mid = reversed.eval(0.5f32);
     assert!(
-        y_mid >= 0.0 && y_mid <= 1.0,
+        (0.0..=1.0).contains(&y_mid),
         "Reversed curve at 0.5 should be in [0,1], got {}",
         y_mid
     );
@@ -1397,7 +1394,10 @@ fn test_placeholder_profile() {
 
     // Placeholder should be valid but minimal
     // It's used for creating custom profiles from scratch
-    assert!(placeholder.icc().is_ok(), "Placeholder should be serializable");
+    assert!(
+        placeholder.icc().is_ok(),
+        "Placeholder should be serializable"
+    );
 }
 
 // ============================================================================
@@ -1583,7 +1583,7 @@ fn test_lab_v2_encoding_roundtrip() {
 /// Port of adapt to illuminant functionality
 #[test]
 fn test_chromatic_adaptation() {
-    use lcms2::{CIEXYZExt, CIEXYZ};
+    use lcms2::{CIEXYZ, CIEXYZExt};
 
     // D50 to D65 adaptation
     let d50 = CIEXYZ {
@@ -1660,7 +1660,10 @@ fn test_delta_e_metrics() {
         b: -10.0,
     };
 
-    assert!(lab1.delta_e(&lab3) > 0.0, "Different colors should have dE76 > 0");
+    assert!(
+        lab1.delta_e(&lab3) > 0.0,
+        "Different colors should have dE76 > 0"
+    );
     assert!(
         lab1.cie94_delta_e(&lab3) > 0.0,
         "Different colors should have dE94 > 0"
@@ -1678,7 +1681,9 @@ fn test_gamma_estimation() {
 
     for g in gammas {
         let curve = ToneCurve::new(g);
-        let estimated = curve.estimated_gamma(0.001).expect("Gamma estimation failed");
+        let estimated = curve
+            .estimated_gamma(0.001)
+            .expect("Gamma estimation failed");
 
         let err = (estimated - g).abs();
         assert!(
@@ -1797,7 +1802,7 @@ fn test_profile_version() {
     let srgb = Profile::new_srgb();
     let version = srgb.version();
     assert!(
-        version >= 2.0 && version < 5.0,
+        (2.0..5.0).contains(&version),
         "sRGB version should be between 2.0 and 5.0, got {}",
         version
     );
@@ -1807,7 +1812,7 @@ fn test_profile_version() {
         .expect("Lab4 profile failed");
     let version = lab4.version();
     assert!(
-        version >= 4.0 && version < 5.0,
+        (4.0..5.0).contains(&version),
         "Lab4 version should be 4.x, got {}",
         version
     );
@@ -1864,7 +1869,10 @@ fn test_profile_pcs() {
 #[test]
 fn test_is_matrix_shaper() {
     let srgb = Profile::new_srgb();
-    assert!(srgb.is_matrix_shaper(), "sRGB should be a matrix shaper profile");
+    assert!(
+        srgb.is_matrix_shaper(),
+        "sRGB should be a matrix shaper profile"
+    );
 }
 
 /// Test intent support

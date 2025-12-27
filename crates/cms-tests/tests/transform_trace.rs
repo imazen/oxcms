@@ -50,7 +50,10 @@ fn trace_sm245b_to_srgb() {
         let linear_sm = lower_val * (1.0 - frac) + upper_val * frac;
 
         eprintln!("Step 1: SM245B linearization");
-        eprintln!("  LUT position: {:.2} (between {} and {})", lut_pos, lower, upper);
+        eprintln!(
+            "  LUT position: {:.2} (between {} and {})",
+            lut_pos, lower, upper
+        );
         eprintln!("  LUT[{}] = {} ({:.5})", lower, lut[lower], lower_val);
         eprintln!("  LUT[{}] = {} ({:.5})", upper, lut[upper], upper_val);
         eprintln!("  Interpolated linear: {:.5}", linear_sm);
@@ -62,11 +65,20 @@ fn trace_sm245b_to_srgb() {
 
         // For gray, all three channels are the same, so:
         let linear_sm_64 = linear_sm as f64;
-        let out_r = (matrix.v[0][0] * linear_sm_64 + matrix.v[0][1] * linear_sm_64 + matrix.v[0][2] * linear_sm_64) as f32;
-        let out_g = (matrix.v[1][0] * linear_sm_64 + matrix.v[1][1] * linear_sm_64 + matrix.v[1][2] * linear_sm_64) as f32;
-        let out_b = (matrix.v[2][0] * linear_sm_64 + matrix.v[2][1] * linear_sm_64 + matrix.v[2][2] * linear_sm_64) as f32;
+        let out_r = (matrix.v[0][0] * linear_sm_64
+            + matrix.v[0][1] * linear_sm_64
+            + matrix.v[0][2] * linear_sm_64) as f32;
+        let out_g = (matrix.v[1][0] * linear_sm_64
+            + matrix.v[1][1] * linear_sm_64
+            + matrix.v[1][2] * linear_sm_64) as f32;
+        let out_b = (matrix.v[2][0] * linear_sm_64
+            + matrix.v[2][1] * linear_sm_64
+            + matrix.v[2][2] * linear_sm_64) as f32;
 
-        eprintln!("  Linear in: [{:.5}, {:.5}, {:.5}]", linear_sm, linear_sm, linear_sm);
+        eprintln!(
+            "  Linear in: [{:.5}, {:.5}, {:.5}]",
+            linear_sm, linear_sm, linear_sm
+        );
         eprintln!("  Linear out: [{:.5}, {:.5}, {:.5}]", out_r, out_g, out_b);
 
         // Step 3: sRGB gamma encoding
@@ -83,19 +95,26 @@ fn trace_sm245b_to_srgb() {
         let encoded_g = srgb_gamma(out_g);
         let encoded_b = srgb_gamma(out_b);
 
-        eprintln!("  Encoded: [{:.5}, {:.5}, {:.5}]", encoded_r, encoded_g, encoded_b);
-        eprintln!("  8-bit: [{}, {}, {}]",
+        eprintln!(
+            "  Encoded: [{:.5}, {:.5}, {:.5}]",
+            encoded_r, encoded_g, encoded_b
+        );
+        eprintln!(
+            "  8-bit: [{}, {}, {}]",
             (encoded_r * 255.0).round() as u8,
             (encoded_g * 255.0).round() as u8,
-            (encoded_b * 255.0).round() as u8);
+            (encoded_b * 255.0).round() as u8
+        );
 
         // Compare with actual moxcms output
-        let transform = profile.create_transform_8bit(
-            moxcms::Layout::Rgb,
-            &srgb,
-            moxcms::Layout::Rgb,
-            moxcms::TransformOptions::default(),
-        ).unwrap();
+        let transform = profile
+            .create_transform_8bit(
+                moxcms::Layout::Rgb,
+                &srgb,
+                moxcms::Layout::Rgb,
+                moxcms::TransformOptions::default(),
+            )
+            .unwrap();
 
         let mut mox_out = [0u8; 3];
         transform.transform(&[128, 128, 128], &mut mox_out).unwrap();
@@ -122,7 +141,10 @@ fn trace_sm245b_to_srgb() {
         eprintln!("\n=== Analysis ===");
         let expected_8bit = (encoded_r * 255.0).round() as u8;
         if mox_out[0] != expected_8bit {
-            eprintln!("BUG: moxcms output {} != expected {} from manual calculation", mox_out[0], expected_8bit);
+            eprintln!(
+                "BUG: moxcms output {} != expected {} from manual calculation",
+                mox_out[0], expected_8bit
+            );
             eprintln!("This suggests the bug is in the lookup table construction, not the math");
         } else {
             eprintln!("moxcms matches manual calculation, but differs from skcms");
@@ -170,7 +192,10 @@ fn test_srgb_linearization() {
         let linear = srgb_linearize(encoded);
         let back = srgb_gamma(linear);
         let back_8bit = (back * 255.0).round() as u8;
-        eprintln!("  {} -> linear {:.5} -> {:.4} -> {}", v, linear, back, back_8bit);
+        eprintln!(
+            "  {} -> linear {:.5} -> {:.4} -> {}",
+            v, linear, back, back_8bit
+        );
     }
 }
 
@@ -217,8 +242,10 @@ fn compare_sm245b_vs_srgb_trc() {
             let srgb_linear = srgb_linearize(encoded);
 
             let diff = (sm_linear - srgb_linear) * 1000.0; // in milli-units
-            eprintln!(" {:3}  |    {:.5}    |   {:.5}   | {:+.3}m",
-                v, sm_linear, srgb_linear, diff);
+            eprintln!(
+                " {:3}  |    {:.5}    |   {:.5}   | {:+.3}m",
+                v, sm_linear, srgb_linear, diff
+            );
         }
 
         eprintln!("\nNote: diff in milli-units (m)");

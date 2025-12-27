@@ -18,9 +18,11 @@ fn test_srgb_to_p3_parity() {
     let test_colors: Vec<[u8; 3]> = (0..=255)
         .step_by(17)
         .flat_map(|r| {
-            (0..=255)
-                .step_by(51)
-                .flat_map(move |g| (0..=255).step_by(51).map(move |b| [r as u8, g as u8, b as u8]))
+            (0..=255).step_by(51).flat_map(move |g| {
+                (0..=255)
+                    .step_by(51)
+                    .map(move |b| [r as u8, g as u8, b as u8])
+            })
         })
         .collect();
 
@@ -69,7 +71,10 @@ fn test_srgb_to_p3_parity() {
     eprintln!("  Sample count: {}", count);
 
     // sRGB to P3 should produce visible changes for saturated colors
-    assert!(max_delta_e > 0.1, "Expected visible color difference for sRGB to P3");
+    assert!(
+        max_delta_e > 0.1,
+        "Expected visible color difference for sRGB to P3"
+    );
 }
 
 /// Test that transforms are deterministic
@@ -86,8 +91,6 @@ fn test_transform_determinism() {
             moxcms::TransformOptions::default(),
         )
         .expect("transform");
-
-
 
     let input = [255u8, 128, 64];
     let mut output1 = [0u8; 3];
@@ -123,15 +126,15 @@ fn test_round_trip_accuracy() {
         )
         .expect("backward transform");
 
-
-
     // Test with mid-gray (should round-trip well)
     let original = [128u8, 128, 128];
     let mut intermediate = [0u8; 3];
     let mut final_result = [0u8; 3];
 
     forward.transform(&original, &mut intermediate).unwrap();
-    backward.transform(&intermediate, &mut final_result).unwrap();
+    backward
+        .transform(&intermediate, &mut final_result)
+        .unwrap();
 
     // Calculate round-trip error
     let orig_lab = srgb_to_lab(original[0], original[1], original[2]);
@@ -167,17 +170,15 @@ fn test_extreme_values() {
         )
         .expect("transform");
 
-
-
     let extreme_colors = [
-        [0u8, 0, 0],       // Black
-        [255, 255, 255],   // White
-        [255, 0, 0],       // Pure red
-        [0, 255, 0],       // Pure green
-        [0, 0, 255],       // Pure blue
-        [255, 255, 0],     // Yellow
-        [0, 255, 255],     // Cyan
-        [255, 0, 255],     // Magenta
+        [0u8, 0, 0],     // Black
+        [255, 255, 255], // White
+        [255, 0, 0],     // Pure red
+        [0, 255, 0],     // Pure green
+        [0, 0, 255],     // Pure blue
+        [255, 255, 0],   // Yellow
+        [0, 255, 255],   // Cyan
+        [255, 0, 255],   // Magenta
     ];
 
     eprintln!("\nExtreme color transforms (sRGB -> P3):");
@@ -189,10 +190,7 @@ fn test_extreme_values() {
         let dst_lab = srgb_to_lab(output[0], output[1], output[2]);
         let delta_e = delta_e_2000(src_lab, dst_lab);
 
-        eprintln!(
-            "  {:?} -> {:?} (ΔE: {:.4})",
-            color, output, delta_e
-        );
+        eprintln!("  {:?} -> {:?} (ΔE: {:.4})", color, output, delta_e);
     }
 }
 
@@ -236,7 +234,7 @@ fn test_lcms2_srgb_identity() {
 
                 // moxcms transform
                 let mut mox_output = [0u8; 3];
-            
+
                 mox_transform.transform(&input, &mut mox_output).unwrap();
 
                 // Compare
@@ -311,8 +309,9 @@ fn test_loaded_profile_parity() {
             let mut mox_output = [0u8; 3];
             let mut lcms_output = [0u8; 3];
 
-        
-            mox_transform.transform(&test_color, &mut mox_output).unwrap();
+            mox_transform
+                .transform(&test_color, &mut mox_output)
+                .unwrap();
             lcms_transform.transform_pixels(&test_color, &mut lcms_output);
 
             eprintln!("  Input:  {:?}", test_color);
@@ -360,8 +359,6 @@ fn test_16bit_precision() {
         )
         .expect("16-bit transform");
 
-
-
     // Test mid-gray at different bit depths
     let input_8 = [128u8, 128, 128];
     let input_16: [u16; 3] = [32768, 32768, 32768]; // Mid-gray in 16-bit
@@ -392,7 +389,8 @@ fn test_16bit_precision() {
         assert!(
             diff <= 2,
             "16-bit and 8-bit results should be close: diff={} at channel {}",
-            diff, i
+            diff,
+            i
         );
     }
 }

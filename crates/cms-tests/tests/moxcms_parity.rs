@@ -4,7 +4,7 @@
 //! (since we're forking from it, this should be exact initially).
 
 use cms_tests::accuracy::compare_rgb_buffers;
-use cms_tests::patterns::{generate_pattern, sizes, TestPattern};
+use cms_tests::patterns::{TestPattern, generate_pattern, sizes};
 use cms_tests::reference::transform_moxcms_srgb;
 
 /// Test that we match moxcms exactly for sRGB identity

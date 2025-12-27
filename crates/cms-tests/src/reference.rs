@@ -67,11 +67,11 @@ pub fn transform_lcms2(
 ) -> Result<Vec<u8>, String> {
     use lcms2::{Intent, PixelFormat, Profile, Transform};
 
-    let src_profile = Profile::new_icc(src_profile_data)
-        .map_err(|e| format!("lcms2 src profile: {}", e))?;
+    let src_profile =
+        Profile::new_icc(src_profile_data).map_err(|e| format!("lcms2 src profile: {}", e))?;
 
-    let dst_profile = Profile::new_icc(dst_profile_data)
-        .map_err(|e| format!("lcms2 dst profile: {}", e))?;
+    let dst_profile =
+        Profile::new_icc(dst_profile_data).map_err(|e| format!("lcms2 dst profile: {}", e))?;
 
     let transform = Transform::new(
         &src_profile,
@@ -149,8 +149,8 @@ pub fn transform_lcms2_cmyk_to_rgb(
 ) -> Result<Vec<u8>, String> {
     use lcms2::{Intent, PixelFormat, Profile, Transform};
 
-    let cmyk_profile = Profile::new_icc(cmyk_profile_data)
-        .map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
+    let cmyk_profile =
+        Profile::new_icc(cmyk_profile_data).map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
 
     let srgb = Profile::new_srgb();
 
@@ -212,8 +212,8 @@ pub fn transform_lcms2_rgb_to_cmyk(
 
     let srgb = Profile::new_srgb();
 
-    let cmyk_profile = Profile::new_icc(cmyk_profile_data)
-        .map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
+    let cmyk_profile =
+        Profile::new_icc(cmyk_profile_data).map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
 
     let transform = Transform::new(
         &srgb,

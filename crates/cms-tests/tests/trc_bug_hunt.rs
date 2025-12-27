@@ -2,7 +2,6 @@
 //!
 //! Deep investigation to find the source of the +20 difference in SM245B.icc
 
-use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
 use std::path::{Path, PathBuf};
 
 fn testdata_dir() -> PathBuf {
@@ -83,10 +82,18 @@ fn test_which_trc_is_wrong() {
         let mut sm245b_identity_out = [0u8; 3];
         let mut srgb_identity_out = [0u8; 3];
 
-        sm245b_to_srgb.transform(&input, &mut sm245b_to_srgb_out).unwrap();
-        srgb_to_sm245b.transform(&input, &mut srgb_to_sm245b_out).unwrap();
-        sm245b_identity.transform(&input, &mut sm245b_identity_out).unwrap();
-        srgb_identity.transform(&input, &mut srgb_identity_out).unwrap();
+        sm245b_to_srgb
+            .transform(&input, &mut sm245b_to_srgb_out)
+            .unwrap();
+        srgb_to_sm245b
+            .transform(&input, &mut srgb_to_sm245b_out)
+            .unwrap();
+        sm245b_identity
+            .transform(&input, &mut sm245b_identity_out)
+            .unwrap();
+        srgb_identity
+            .transform(&input, &mut srgb_identity_out)
+            .unwrap();
 
         eprintln!(
             " {:3}  |     {:3}      |     {:3}      |      {:3}       |    {:3}",
@@ -110,7 +117,8 @@ fn test_which_trc_is_wrong() {
         &lcms2_srgb,
         lcms2::PixelFormat::RGB_8,
         lcms2::Intent::Perceptual,
-    ).unwrap();
+    )
+    .unwrap();
 
     let lcms2_srgb_to_sm245b = lcms2::Transform::new(
         &lcms2_srgb,
@@ -118,7 +126,8 @@ fn test_which_trc_is_wrong() {
         &lcms2_sm245b,
         lcms2::PixelFormat::RGB_8,
         lcms2::Intent::Perceptual,
-    ).unwrap();
+    )
+    .unwrap();
 
     eprintln!("\nSM245B -> sRGB comparison:");
     eprintln!("Input | moxcms | lcms2 | diff");
@@ -134,7 +143,10 @@ fn test_which_trc_is_wrong() {
         lcms2_sm245b_to_srgb.transform_pixels(&input, &mut lcms_out);
 
         let diff = mox_out[0] as i32 - lcms_out[0] as i32;
-        eprintln!(" {:3}  |  {:3}   |  {:3}  | {:+3}", v, mox_out[0], lcms_out[0], diff);
+        eprintln!(
+            " {:3}  |  {:3}   |  {:3}  | {:+3}",
+            v, mox_out[0], lcms_out[0], diff
+        );
     }
 
     eprintln!("\nsRGB -> SM245B comparison:");
@@ -151,7 +163,10 @@ fn test_which_trc_is_wrong() {
         lcms2_srgb_to_sm245b.transform_pixels(&input, &mut lcms_out);
 
         let diff = mox_out[0] as i32 - lcms_out[0] as i32;
-        eprintln!(" {:3}  |  {:3}   |  {:3}  | {:+3}", v, mox_out[0], lcms_out[0], diff);
+        eprintln!(
+            " {:3}  |  {:3}   |  {:3}  | {:+3}",
+            v, mox_out[0], lcms_out[0], diff
+        );
     }
 }
 
@@ -243,9 +258,18 @@ fn test_profile_internals() {
 
     let sm_matrix = sm245b.colorant_matrix();
     eprintln!("  Colorant matrix:");
-    eprintln!("    R: [{:.6}, {:.6}, {:.6}]", sm_matrix.v[0][0], sm_matrix.v[0][1], sm_matrix.v[0][2]);
-    eprintln!("    G: [{:.6}, {:.6}, {:.6}]", sm_matrix.v[1][0], sm_matrix.v[1][1], sm_matrix.v[1][2]);
-    eprintln!("    B: [{:.6}, {:.6}, {:.6}]", sm_matrix.v[2][0], sm_matrix.v[2][1], sm_matrix.v[2][2]);
+    eprintln!(
+        "    R: [{:.6}, {:.6}, {:.6}]",
+        sm_matrix.v[0][0], sm_matrix.v[0][1], sm_matrix.v[0][2]
+    );
+    eprintln!(
+        "    G: [{:.6}, {:.6}, {:.6}]",
+        sm_matrix.v[1][0], sm_matrix.v[1][1], sm_matrix.v[1][2]
+    );
+    eprintln!(
+        "    B: [{:.6}, {:.6}, {:.6}]",
+        sm_matrix.v[2][0], sm_matrix.v[2][1], sm_matrix.v[2][2]
+    );
 
     eprintln!("\nsRGB profile:");
     eprintln!("  Is matrix-shaper: {}", srgb.is_matrix_shaper());
@@ -253,9 +277,18 @@ fn test_profile_internals() {
 
     let srgb_matrix = srgb.colorant_matrix();
     eprintln!("  Colorant matrix:");
-    eprintln!("    R: [{:.6}, {:.6}, {:.6}]", srgb_matrix.v[0][0], srgb_matrix.v[0][1], srgb_matrix.v[0][2]);
-    eprintln!("    G: [{:.6}, {:.6}, {:.6}]", srgb_matrix.v[1][0], srgb_matrix.v[1][1], srgb_matrix.v[1][2]);
-    eprintln!("    B: [{:.6}, {:.6}, {:.6}]", srgb_matrix.v[2][0], srgb_matrix.v[2][1], srgb_matrix.v[2][2]);
+    eprintln!(
+        "    R: [{:.6}, {:.6}, {:.6}]",
+        srgb_matrix.v[0][0], srgb_matrix.v[0][1], srgb_matrix.v[0][2]
+    );
+    eprintln!(
+        "    G: [{:.6}, {:.6}, {:.6}]",
+        srgb_matrix.v[1][0], srgb_matrix.v[1][1], srgb_matrix.v[1][2]
+    );
+    eprintln!(
+        "    B: [{:.6}, {:.6}, {:.6}]",
+        srgb_matrix.v[2][0], srgb_matrix.v[2][1], srgb_matrix.v[2][2]
+    );
 }
 
 /// Test with f32 to see if it's a quantization issue

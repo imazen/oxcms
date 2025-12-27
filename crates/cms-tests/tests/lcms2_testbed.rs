@@ -5,9 +5,12 @@
 //!
 //! Original source: https://github.com/mm2/Little-CMS/blob/master/testbed/testcms2.c
 
+#![allow(clippy::needless_range_loop)]
+#![allow(dead_code)]
+
 use lcms2::{
-    white_point_from_temp, xyY2XYZ, CIELab, CIELabExt, CIEXYZExt, CIExzYExt, CIEXYZ, ToneCurve,
-    XYZ2xyY,
+    CIELab, CIELabExt, CIEXYZ, CIEXYZExt, CIExzYExt, ToneCurve, XYZ2xyY, white_point_from_temp,
+    xyY2XYZ,
 };
 
 // ============================================================================
@@ -392,13 +395,19 @@ fn test_known_color_temperatures() {
 
     // 4000K should be valid (minimum range)
     let t4000 = white_point_from_temp(4000.0).expect("4000K failed");
-    assert!(t4000.x > 0.0 && t4000.y > 0.0, "4000K should produce valid chromaticity");
+    assert!(
+        t4000.x > 0.0 && t4000.y > 0.0,
+        "4000K should produce valid chromaticity"
+    );
 
     // 25000K should be valid (maximum range)
     let t25000 = white_point_from_temp(25000.0);
     // Note: Some versions may not support 25000K exactly
     if let Some(t) = t25000 {
-        assert!(t.x > 0.0 && t.y > 0.0, "25000K should produce valid chromaticity");
+        assert!(
+            t.x > 0.0 && t.y > 0.0,
+            "25000K should produce valid chromaticity"
+        );
     }
 }
 
@@ -742,7 +751,10 @@ fn test_gamma_tabulated_16() {
 
     // Verify curve properties
     assert!(curve.is_monotonic(), "Gamma table should be monotonic");
-    assert!(!curve.is_descending(), "Gamma table should not be descending");
+    assert!(
+        !curve.is_descending(),
+        "Gamma table should not be descending"
+    );
 
     // Estimate gamma
     if let Some(estimated) = curve.estimated_gamma(0.1) {
@@ -769,7 +781,10 @@ fn test_gamma_tabulated_float() {
     let curve = ToneCurve::new_tabulated_float(&table);
 
     // Verify curve properties
-    assert!(curve.is_monotonic(), "Float gamma table should be monotonic");
+    assert!(
+        curve.is_monotonic(),
+        "Float gamma table should be monotonic"
+    );
 
     // Test evaluation
     let y = curve.eval(0.5f32);
@@ -820,7 +835,10 @@ fn test_parametric_curve_type2_cie122() {
     let params = [2.2, 1.5, -0.5]; // gamma, a, b
     let curve = ToneCurve::new_parametric(2, &params).expect("Type 2 curve creation failed");
 
-    assert!(curve.is_monotonic(), "CIE 122-1966 curve should be monotonic");
+    assert!(
+        curve.is_monotonic(),
+        "CIE 122-1966 curve should be monotonic"
+    );
 
     // At x = 0.5: y = (1.5 * 0.5 - 0.5)^2.2 = 0.25^2.2 ≈ 0.047
     let y = curve.eval(0.5f32);
@@ -854,11 +872,11 @@ fn test_parametric_curve_type3_iec61966_3() {
 fn test_parametric_curve_type4_srgb() {
     // sRGB EOTF parameters
     let params = [
-        2.4,            // gamma
-        1.0 / 1.055,    // a
-        0.055 / 1.055,  // b
-        1.0 / 12.92,    // c
-        0.04045,        // d (transition point)
+        2.4,           // gamma
+        1.0 / 1.055,   // a
+        0.055 / 1.055, // b
+        1.0 / 12.92,   // c
+        0.04045,       // d (transition point)
     ];
     let curve = ToneCurve::new_parametric(4, &params).expect("Type 4 (sRGB) curve creation failed");
 
@@ -871,7 +889,11 @@ fn test_parametric_curve_type4_srgb() {
 
     // sRGB linear 1.0 -> sRGB encoded 1.0
     let y1 = curve.eval(1.0f32);
-    assert!((y1 - 1.0).abs() < 0.001, "sRGB at 1: expected 1, got {}", y1);
+    assert!(
+        (y1 - 1.0).abs() < 0.001,
+        "sRGB at 1: expected 1, got {}",
+        y1
+    );
 }
 
 /// Test parametric curve type 108: S-Shaped sigmoidal
@@ -879,8 +901,8 @@ fn test_parametric_curve_type4_srgb() {
 #[test]
 fn test_parametric_curve_type108_sigmoidal() {
     let params = [1.9]; // gamma
-    let curve =
-        ToneCurve::new_parametric(108, &params).expect("Type 108 (sigmoidal) curve creation failed");
+    let curve = ToneCurve::new_parametric(108, &params)
+        .expect("Type 108 (sigmoidal) curve creation failed");
 
     // Sigmoidal should be monotonic
     assert!(curve.is_monotonic(), "Sigmoidal curve should be monotonic");

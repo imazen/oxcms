@@ -37,7 +37,7 @@ fn examine_sm245b_raw_trc() {
             moxcms::ToneReprCurve::Lut(lut) => {
                 eprintln!("Red TRC is LUT with {} entries", lut.len());
                 // Print some sample values
-                if lut.len() > 0 {
+                if !lut.is_empty() {
                     eprintln!("  First 5 values: {:?}", &lut[..5.min(lut.len())]);
                     eprintln!("  Last 5 values: {:?}", &lut[lut.len().saturating_sub(5)..]);
 
@@ -55,8 +55,13 @@ fn examine_sm245b_raw_trc() {
                     eprintln!("  Sample values:");
                     for &pct in &[0, 25, 50, 75, 100] {
                         let idx = (pct * (len - 1)) / 100;
-                        eprintln!("    {}%: idx={}, value={} ({:.6} normalized)",
-                            pct, idx, lut[idx], lut[idx] as f32 / 65535.0);
+                        eprintln!(
+                            "    {}%: idx={}, value={} ({:.6} normalized)",
+                            pct,
+                            idx,
+                            lut[idx],
+                            lut[idx] as f32 / 65535.0
+                        );
                     }
 
                     // Calculate effective gamma at midpoint
@@ -84,7 +89,11 @@ fn examine_sm245b_raw_trc() {
                 }
             }
             moxcms::ToneReprCurve::Parametric(params) => {
-                eprintln!("Red TRC is Parametric with {} params: {:?}", params.len(), params);
+                eprintln!(
+                    "Red TRC is Parametric with {} params: {:?}",
+                    params.len(),
+                    params
+                );
             }
         }
     } else {
@@ -159,7 +168,10 @@ fn compare_skcms_vs_moxcms_transforms() {
             moxcms_transform.transform(&color, &mut moxcms_out).unwrap();
 
             let diff = moxcms_out[0] as i32 - skcms_out[0] as i32;
-            eprintln!(" {:3}  |  {:3}  |   {:3}  | {:+3}", v, skcms_out[0], moxcms_out[0], diff);
+            eprintln!(
+                " {:3}  |  {:3}  |   {:3}  | {:+3}",
+                v, skcms_out[0], moxcms_out[0], diff
+            );
         }
     }
 }
@@ -189,7 +201,10 @@ fn examine_trc_curve_shape() {
             let idx = (pct * (lut.len() - 1)) / 100;
             let val = lut[idx];
             let normalized = val as f32 / 65535.0;
-            eprintln!("  {:3}%  |   {:5}   |   {:5}   |   {:.4}", pct, idx, val, normalized);
+            eprintln!(
+                "  {:3}%  |   {:5}   |   {:5}   |   {:.4}",
+                pct, idx, val, normalized
+            );
         }
 
         eprintln!("\n=== Interpretation ===");
@@ -243,8 +258,12 @@ fn compare_linearization_behavior() {
 
         let mid_idx = lut.len() / 2;
         let mid_val = lut[mid_idx];
-        eprintln!("\nAt 50% input (index {}): output = {} ({:.1}%)",
-            mid_idx, mid_val, mid_val as f32 / 655.35);
+        eprintln!(
+            "\nAt 50% input (index {}): output = {} ({:.1}%)",
+            mid_idx,
+            mid_val,
+            mid_val as f32 / 655.35
+        );
 
         // Calculate what this means for gamma
         if mid_val > 30000 {

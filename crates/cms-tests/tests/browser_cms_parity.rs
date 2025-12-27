@@ -108,7 +108,10 @@ fn test_srgb_identity_browser_parity() {
 
         // Find max difference between any pair
         let max_diff = |a: &[u8; 3], b: &[u8; 3]| -> i32 {
-            (0..3).map(|i| (a[i] as i32 - b[i] as i32).abs()).max().unwrap()
+            (0..3)
+                .map(|i| (a[i] as i32 - b[i] as i32).abs())
+                .max()
+                .unwrap()
         };
 
         let qcms_vs_skcms = max_diff(&qcms_out_arr, &skcms_out);
@@ -127,14 +130,15 @@ fn test_srgb_identity_browser_parity() {
         }
 
         // Flag differences between browsers and reference CMS
-        if qcms_vs_lcms2 > 0 || skcms_vs_lcms2 > 0 {
-            if qcms_vs_lcms2 == skcms_vs_lcms2 && qcms_vs_skcms == 0 {
-                // Both browsers agree but differ from lcms2 - browser consensus
-                differences_found.push(format!(
-                    "BROWSER CONSENSUS: {} {:?} browsers={:?} vs lcms2={:?} (diff={})",
-                    name, color, qcms_out_arr, lcms2_out, qcms_vs_lcms2
-                ));
-            }
+        if (qcms_vs_lcms2 > 0 || skcms_vs_lcms2 > 0)
+            && qcms_vs_lcms2 == skcms_vs_lcms2
+            && qcms_vs_skcms == 0
+        {
+            // Both browsers agree but differ from lcms2 - browser consensus
+            differences_found.push(format!(
+                "BROWSER CONSENSUS: {} {:?} browsers={:?} vs lcms2={:?} (diff={})",
+                name, color, qcms_out_arr, lcms2_out, qcms_vs_lcms2
+            ));
         }
 
         // Check moxcms alignment
@@ -173,30 +177,41 @@ fn test_rendering_intent_browser_parity() {
     eprintln!("\n=== Browser CMS Rendering Intent Parity ===");
 
     let intents = [
-        (qcms::Intent::Perceptual, lcms2::Intent::Perceptual, moxcms::RenderingIntent::Perceptual, "Perceptual"),
-        (qcms::Intent::RelativeColorimetric, lcms2::Intent::RelativeColorimetric, moxcms::RenderingIntent::RelativeColorimetric, "RelativeColorimetric"),
-        (qcms::Intent::Saturation, lcms2::Intent::Saturation, moxcms::RenderingIntent::Saturation, "Saturation"),
-        (qcms::Intent::AbsoluteColorimetric, lcms2::Intent::AbsoluteColorimetric, moxcms::RenderingIntent::AbsoluteColorimetric, "AbsoluteColorimetric"),
+        (
+            qcms::Intent::Perceptual,
+            lcms2::Intent::Perceptual,
+            moxcms::RenderingIntent::Perceptual,
+            "Perceptual",
+        ),
+        (
+            qcms::Intent::RelativeColorimetric,
+            lcms2::Intent::RelativeColorimetric,
+            moxcms::RenderingIntent::RelativeColorimetric,
+            "RelativeColorimetric",
+        ),
+        (
+            qcms::Intent::Saturation,
+            lcms2::Intent::Saturation,
+            moxcms::RenderingIntent::Saturation,
+            "Saturation",
+        ),
+        (
+            qcms::Intent::AbsoluteColorimetric,
+            lcms2::Intent::AbsoluteColorimetric,
+            moxcms::RenderingIntent::AbsoluteColorimetric,
+            "AbsoluteColorimetric",
+        ),
     ];
 
-    let test_colors: Vec<[u8; 3]> = vec![
-        [255, 0, 0],
-        [0, 255, 0],
-        [0, 0, 255],
-        [128, 128, 128],
-    ];
+    let test_colors: Vec<[u8; 3]> = vec![[255, 0, 0], [0, 255, 0], [0, 0, 255], [128, 128, 128]];
 
     let mut intent_differences = Vec::new();
 
     for (qcms_intent, lcms2_intent, moxcms_intent, intent_name) in &intents {
         let qcms_srgb = qcms::Profile::new_sRGB();
-        let qcms_transform = qcms::Transform::new(
-            &qcms_srgb,
-            &qcms_srgb,
-            qcms::DataType::RGB8,
-            *qcms_intent,
-        )
-        .unwrap();
+        let qcms_transform =
+            qcms::Transform::new(&qcms_srgb, &qcms_srgb, qcms::DataType::RGB8, *qcms_intent)
+                .unwrap();
 
         let moxcms_srgb = moxcms::ColorProfile::new_srgb();
         let moxcms_transform = moxcms_srgb
@@ -246,8 +261,13 @@ fn test_rendering_intent_browser_parity() {
             if qcms_vs_lcms2 > 0 || moxcms_vs_lcms2 > 0 {
                 intent_differences.push(format!(
                     "{} intent {:?}: qcms={:?}(diff={}) moxcms={:?}(diff={}) lcms2={:?}",
-                    intent_name, color, qcms_out_arr, qcms_vs_lcms2,
-                    moxcms_out, moxcms_vs_lcms2, lcms2_out
+                    intent_name,
+                    color,
+                    qcms_out_arr,
+                    qcms_vs_lcms2,
+                    moxcms_out,
+                    moxcms_vs_lcms2,
+                    lcms2_out
                 ));
             }
         }
@@ -332,7 +352,10 @@ fn test_trc_curve_browser_parity() {
             1,
         );
 
-        if qcms_out[0] != lcms2_out[0] || skcms_out[0] != lcms2_out[0] || moxcms_out[0] != lcms2_out[0] {
+        if qcms_out[0] != lcms2_out[0]
+            || skcms_out[0] != lcms2_out[0]
+            || moxcms_out[0] != lcms2_out[0]
+        {
             curve_diffs.push(format!(
                 "  Input={}: qcms={} skcms={} moxcms={} lcms2={}",
                 v, qcms_out[0], skcms_out[0], moxcms_out[0], lcms2_out[0]
@@ -350,7 +373,10 @@ fn test_trc_curve_browser_parity() {
     }
 
     // For sRGB identity, TRC should be identical
-    assert!(curve_diffs.is_empty(), "TRC curves should match for sRGB identity");
+    assert!(
+        curve_diffs.is_empty(),
+        "TRC curves should match for sRGB identity"
+    );
 }
 
 /// Test external profile transform parity between browsers
@@ -462,7 +488,9 @@ fn test_external_profile_browser_parity() {
         qcms_transform.apply(&mut qcms_out);
 
         let mut moxcms_out = [0u8; 3];
-        moxcms_transform.transform(&test_color, &mut moxcms_out).unwrap();
+        moxcms_transform
+            .transform(&test_color, &mut moxcms_out)
+            .unwrap();
 
         let mut lcms2_out = [0u8; 3];
         lcms2_transform.transform_pixels(&test_color, &mut lcms2_out);
@@ -510,7 +538,10 @@ fn test_external_profile_browser_parity() {
 
         // Flag significant browser disagreement
         if qcms_vs_skcms > 2 {
-            eprintln!("    WARNING: Browsers disagree by {} on {}", qcms_vs_skcms, name);
+            eprintln!(
+                "    WARNING: Browsers disagree by {} on {}",
+                qcms_vs_skcms, name
+            );
         }
 
         // Flag if moxcms deviates significantly from browser consensus

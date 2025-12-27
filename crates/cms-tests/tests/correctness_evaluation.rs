@@ -30,7 +30,7 @@ fn collect_profiles() -> Vec<PathBuf> {
                 let path = entry.path();
                 if path.is_dir() {
                     walk_dir(&path, profiles);
-                } else if path.extension().map_or(false, |e| e == "icc" || e == "icm") {
+                } else if path.extension().is_some_and(|e| e == "icc" || e == "icm") {
                     profiles.push(path);
                 }
             }
@@ -54,13 +54,13 @@ fn collect_profiles() -> Vec<PathBuf> {
 /// Standard test colors covering the full gamut
 const TEST_COLORS_RGB8: &[[u8; 3]] = &[
     // Primaries
-    [255, 0, 0],     // Red
-    [0, 255, 0],     // Green
-    [0, 0, 255],     // Blue
+    [255, 0, 0], // Red
+    [0, 255, 0], // Green
+    [0, 0, 255], // Blue
     // Secondaries
-    [255, 255, 0],   // Yellow
-    [255, 0, 255],   // Magenta
-    [0, 255, 255],   // Cyan
+    [255, 255, 0], // Yellow
+    [255, 0, 255], // Magenta
+    [0, 255, 255], // Cyan
     // Neutrals
     [0, 0, 0],       // Black
     [128, 128, 128], // Mid gray
@@ -73,9 +73,9 @@ const TEST_COLORS_RGB8: &[[u8; 3]] = &[
     [144, 238, 144], // Light green
     [173, 216, 230], // Light blue
     // Deep colors
-    [128, 0, 0],     // Maroon
-    [0, 128, 0],     // Dark green
-    [0, 0, 128],     // Navy
+    [128, 0, 0], // Maroon
+    [0, 128, 0], // Dark green
+    [0, 0, 128], // Navy
     // Grays
     [32, 32, 32],
     [64, 64, 64],
@@ -120,7 +120,11 @@ fn evaluate_parsing(profiles: &[PathBuf]) -> HashMap<String, ParseResult> {
     let mut results = HashMap::new();
 
     for profile_path in profiles {
-        let filename = profile_path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = profile_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
 
         let data = match std::fs::read(profile_path) {
             Ok(d) => d,
@@ -160,7 +164,11 @@ fn evaluate_transforms(profiles: &[PathBuf]) -> Vec<TransformResult> {
     let srgb_skcms = skcms_sys::srgb_profile();
 
     for profile_path in profiles {
-        let filename = profile_path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = profile_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
 
         // Skip known problematic profiles
         if filename.contains("bad")
@@ -206,39 +214,38 @@ fn evaluate_transforms(profiles: &[PathBuf]) -> Vec<TransformResult> {
         }
 
         // Try qcms
-        let (qcms_output, qcms_max_diff) = if let Some(qcms_profile) =
-            qcms::Profile::new_from_slice(&data, false)
-        {
-            if let Some(transform) = qcms::Transform::new(
-                &qcms_profile,
-                &srgb_qcms,
-                qcms::DataType::RGB8,
-                qcms::Intent::Perceptual,
-            ) {
-                let mut output = Vec::with_capacity(TEST_COLORS_RGB8.len());
-                let mut max_diff = 0i32;
+        let (qcms_output, qcms_max_diff) =
+            if let Some(qcms_profile) = qcms::Profile::new_from_slice(&data, false) {
+                if let Some(transform) = qcms::Transform::new(
+                    &qcms_profile,
+                    &srgb_qcms,
+                    qcms::DataType::RGB8,
+                    qcms::Intent::Perceptual,
+                ) {
+                    let mut output = Vec::with_capacity(TEST_COLORS_RGB8.len());
+                    let mut max_diff = 0i32;
 
-                for (i, color) in TEST_COLORS_RGB8.iter().enumerate() {
-                    let mut data = color.to_vec();
-                    transform.apply(&mut data);
-                    let out = [data[0], data[1], data[2]];
+                    for (i, color) in TEST_COLORS_RGB8.iter().enumerate() {
+                        let mut data = color.to_vec();
+                        transform.apply(&mut data);
+                        let out = [data[0], data[1], data[2]];
 
-                    // Compare to lcms2
-                    for c in 0..3 {
-                        let diff = (out[c] as i32 - lcms2_output[i][c] as i32).abs();
-                        max_diff = max_diff.max(diff);
+                        // Compare to lcms2
+                        for c in 0..3 {
+                            let diff = (out[c] as i32 - lcms2_output[i][c] as i32).abs();
+                            max_diff = max_diff.max(diff);
+                        }
+
+                        output.push(out);
                     }
 
-                    output.push(out);
+                    (Some(output), Some(max_diff))
+                } else {
+                    (None, None)
                 }
-
-                (Some(output), Some(max_diff))
             } else {
                 (None, None)
-            }
-        } else {
-            (None, None)
-        };
+            };
 
         // Try moxcms
         let (moxcms_output, moxcms_max_diff) =
@@ -471,7 +478,10 @@ fn test_full_correctness_evaluation() {
     }
 
     let tested = transform_results.len();
-    eprintln!("Transform Accuracy vs lcms2 ({} RGB profiles tested):\n", tested);
+    eprintln!(
+        "Transform Accuracy vs lcms2 ({} RGB profiles tested):\n",
+        tested
+    );
 
     eprintln!("  qcms:");
     eprintln!("    Perfect (diff=0):     {}", qcms_perfect);
@@ -519,7 +529,11 @@ fn test_moxcms_failure_analysis() {
     let mut error_types: HashMap<String, Vec<String>> = HashMap::new();
 
     for profile_path in &profiles {
-        let filename = profile_path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = profile_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
 
         // Skip fuzz/bad profiles
         if filename.contains("fuzz") || filename.contains("bad") || filename.contains("toosmall") {
@@ -539,10 +553,7 @@ fn test_moxcms_failure_analysis() {
         // Try moxcms
         if let Err(e) = moxcms::ColorProfile::new_from_slice(&data) {
             let error_str = format!("{:?}", e);
-            error_types
-                .entry(error_str)
-                .or_default()
-                .push(filename);
+            error_types.entry(error_str).or_default().push(filename);
         }
     }
 

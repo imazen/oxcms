@@ -9,7 +9,7 @@
 //! 2. Documented with justification for why we differ
 
 use cms_tests::accuracy::{delta_e_2000, srgb_to_lab};
-use cms_tests::patterns::{generate_pattern, TestPattern};
+use cms_tests::patterns::{TestPattern, generate_pattern};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 use std::collections::HashMap;
 
@@ -167,8 +167,11 @@ fn document_color_cube_sample() {
 
     eprintln!("\n=== COLOR CUBE SAMPLE (step={}) ===", step);
     eprintln!("Total samples: {}", total_samples);
-    eprintln!("Differences: {} ({:.2}%)", differences.len(),
-        100.0 * differences.len() as f64 / total_samples as f64);
+    eprintln!(
+        "Differences: {} ({:.2}%)",
+        differences.len(),
+        100.0 * differences.len() as f64 / total_samples as f64
+    );
 
     if !differences.is_empty() {
         // Categorize by deltaE magnitude
@@ -205,10 +208,7 @@ fn document_color_cube_sample() {
     }
 
     // Fail if any difference is perceptible
-    let max_delta_e = differences
-        .iter()
-        .map(|d| d.delta_e)
-        .fold(0.0, f64::max);
+    let max_delta_e = differences.iter().map(|d| d.delta_e).fold(0.0, f64::max);
 
     assert!(
         max_delta_e < 1.0,
@@ -231,18 +231,38 @@ fn generate_difference_report() {
 
     // Test each category
     let categories = [
-        ("Grayscale", generate_pattern(TestPattern::Grayscale, 256, 1)),
+        (
+            "Grayscale",
+            generate_pattern(TestPattern::Grayscale, 256, 1),
+        ),
         ("Primaries", {
             let mut v = Vec::new();
-            for c in &[[0u8,0,0], [255,0,0], [0,255,0], [0,0,255],
-                       [255,255,0], [255,0,255], [0,255,255], [255,255,255]] {
+            for c in &[
+                [0u8, 0, 0],
+                [255, 0, 0],
+                [0, 255, 0],
+                [0, 0, 255],
+                [255, 255, 0],
+                [255, 0, 255],
+                [0, 255, 255],
+                [255, 255, 255],
+            ] {
                 v.extend_from_slice(c);
             }
             v
         }),
-        ("Skin tones", generate_pattern(TestPattern::SkinTones, 64, 1)),
-        ("Gamut boundary", generate_pattern(TestPattern::GamutBoundary, 64, 1)),
-        ("Random (seed 42)", generate_pattern(TestPattern::Random(42), 100, 1)),
+        (
+            "Skin tones",
+            generate_pattern(TestPattern::SkinTones, 64, 1),
+        ),
+        (
+            "Gamut boundary",
+            generate_pattern(TestPattern::GamutBoundary, 64, 1),
+        ),
+        (
+            "Random (seed 42)",
+            generate_pattern(TestPattern::Random(42), 100, 1),
+        ),
     ];
 
     for (name, input) in categories {
@@ -250,8 +270,13 @@ fn generate_difference_report() {
         let samples = input.len() / 3;
         let max_de = diffs.iter().map(|d| d.delta_e).fold(0.0, f64::max);
 
-        eprintln!("| {} | {} | {} | {:.4} |",
-            name, samples, diffs.len(), max_de);
+        eprintln!(
+            "| {} | {} | {} | {:.4} |",
+            name,
+            samples,
+            diffs.len(),
+            max_de
+        );
     }
 
     eprintln!("\n## Details\n");

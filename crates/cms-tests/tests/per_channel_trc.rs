@@ -51,7 +51,8 @@ fn check_per_channel_trc() {
         Some(moxcms::ToneReprCurve::Lut(r)),
         Some(moxcms::ToneReprCurve::Lut(g)),
         Some(moxcms::ToneReprCurve::Lut(b)),
-    ) = (&profile.red_trc, &profile.green_trc, &profile.blue_trc) {
+    ) = (&profile.red_trc, &profile.green_trc, &profile.blue_trc)
+    {
         let r_eq_g = r == g;
         let g_eq_b = g == b;
         eprintln!("\nR == G: {}", r_eq_g);
@@ -157,12 +158,14 @@ fn test_individual_channels() {
     // Now test moxcms
     let mox_profile = moxcms::ColorProfile::new_from_slice(&data).unwrap();
     let mox_srgb = moxcms::ColorProfile::new_srgb();
-    let mox_transform = mox_profile.create_transform_8bit(
-        moxcms::Layout::Rgb,
-        &mox_srgb,
-        moxcms::Layout::Rgb,
-        moxcms::TransformOptions::default(),
-    ).unwrap();
+    let mox_transform = mox_profile
+        .create_transform_8bit(
+            moxcms::Layout::Rgb,
+            &mox_srgb,
+            moxcms::Layout::Rgb,
+            moxcms::TransformOptions::default(),
+        )
+        .unwrap();
 
     eprintln!("\nmoxcms transforms:");
     for input in [[128u8, 0, 0], [0, 128, 0], [0, 0, 128], [128, 128, 128]] {
@@ -192,7 +195,8 @@ fn detailed_trc_comparison() {
         Some(moxcms::ToneReprCurve::Lut(r)),
         Some(moxcms::ToneReprCurve::Lut(g)),
         Some(moxcms::ToneReprCurve::Lut(b)),
-    ) = (&profile.red_trc, &profile.green_trc, &profile.blue_trc) {
+    ) = (&profile.red_trc, &profile.green_trc, &profile.blue_trc)
+    {
         eprintln!("TRC values at key indices:");
         eprintln!("Index |   Red   |  Green  |  Blue   | R-G diff | G-B diff");
         eprintln!("------|---------|---------|---------|----------|----------");

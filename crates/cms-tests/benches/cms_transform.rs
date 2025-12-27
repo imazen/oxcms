@@ -3,7 +3,7 @@
 //! Compares moxcms, lcms2, qcms, and skcms transform performance.
 //! Tests both profile parsing and pixel transforms at various sizes.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
 
 const PIXEL_COUNTS: &[usize] = &[1, 16, 256, 4096, 65536, 262144];
@@ -50,9 +50,7 @@ fn bench_srgb_identity_8bit(c: &mut Criterion) {
         .unwrap();
 
         group.bench_with_input(BenchmarkId::new("lcms2", count), &count, |b, _| {
-            b.iter(|| {
-                lcms2_transform.transform_pixels(black_box(&input), black_box(&mut output))
-            })
+            b.iter(|| lcms2_transform.transform_pixels(black_box(&input), black_box(&mut output)))
         });
 
         // Setup qcms (in-place only)
@@ -223,9 +221,7 @@ fn bench_rgba_transforms(c: &mut Criterion) {
         .unwrap();
 
         group.bench_with_input(BenchmarkId::new("lcms2", count), &count, |b, _| {
-            b.iter(|| {
-                lcms2_transform.transform_pixels(black_box(&input), black_box(&mut output))
-            })
+            b.iter(|| lcms2_transform.transform_pixels(black_box(&input), black_box(&mut output)))
         });
 
         // Setup skcms
@@ -293,10 +289,7 @@ fn bench_16bit_transforms(c: &mut Criterion) {
         .unwrap();
 
         // lcms2 transform_pixels takes &[u8], need to cast
-        let input_u8: Vec<u8> = input
-            .iter()
-            .flat_map(|&v| v.to_ne_bytes())
-            .collect();
+        let input_u8: Vec<u8> = input.iter().flat_map(|&v| v.to_ne_bytes()).collect();
         let mut output_u8 = vec![0u8; size * 2];
 
         group.bench_with_input(BenchmarkId::new("lcms2", count), &count, |b, _| {

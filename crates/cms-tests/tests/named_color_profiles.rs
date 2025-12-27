@@ -89,7 +89,8 @@ fn test_read_existing_named_colors_xml() {
                 let has_fluorescent = content.contains("Fluorescent");
 
                 eprintln!("      Colors: {}", color_count);
-                eprintln!("      Features: {}{}{}",
+                eprintln!(
+                    "      Features: {}{}{}",
                     if has_spectral { "spectral " } else { "" },
                     if has_tint { "tints " } else { "" },
                     if has_fluorescent { "fluorescence " } else { "" }

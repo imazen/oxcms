@@ -41,8 +41,10 @@ fn check_sm245b_white_point() {
     let d50 = [0.9642f64, 1.0, 0.8251];
     let d65 = [0.9505f64, 1.0, 1.0888];
 
-    let dist_d50 = ((wp.x - d50[0]).powi(2) + (wp.y - d50[1]).powi(2) + (wp.z - d50[2]).powi(2)).sqrt();
-    let dist_d65 = ((wp.x - d65[0]).powi(2) + (wp.y - d65[1]).powi(2) + (wp.z - d65[2]).powi(2)).sqrt();
+    let dist_d50 =
+        ((wp.x - d50[0]).powi(2) + (wp.y - d50[1]).powi(2) + (wp.z - d50[2]).powi(2)).sqrt();
+    let dist_d65 =
+        ((wp.x - d65[0]).powi(2) + (wp.y - d65[1]).powi(2) + (wp.z - d65[2]).powi(2)).sqrt();
 
     eprintln!("\nDistance to D50: {:.6}", dist_d50);
     eprintln!("Distance to D65: {:.6}", dist_d65);
@@ -55,16 +57,31 @@ fn check_sm245b_white_point() {
 
     // Check the colorants
     eprintln!("\nSM245B colorants (from profile):");
-    eprintln!("  Red:   [{:.6}, {:.6}, {:.6}]", profile.red_colorant.x, profile.red_colorant.y, profile.red_colorant.z);
-    eprintln!("  Green: [{:.6}, {:.6}, {:.6}]", profile.green_colorant.x, profile.green_colorant.y, profile.green_colorant.z);
-    eprintln!("  Blue:  [{:.6}, {:.6}, {:.6}]", profile.blue_colorant.x, profile.blue_colorant.y, profile.blue_colorant.z);
+    eprintln!(
+        "  Red:   [{:.6}, {:.6}, {:.6}]",
+        profile.red_colorant.x, profile.red_colorant.y, profile.red_colorant.z
+    );
+    eprintln!(
+        "  Green: [{:.6}, {:.6}, {:.6}]",
+        profile.green_colorant.x, profile.green_colorant.y, profile.green_colorant.z
+    );
+    eprintln!(
+        "  Blue:  [{:.6}, {:.6}, {:.6}]",
+        profile.blue_colorant.x, profile.blue_colorant.y, profile.blue_colorant.z
+    );
 
     // Sum of colorants should equal white point for an ICC profile
     let sum_x = profile.red_colorant.x + profile.green_colorant.x + profile.blue_colorant.x;
     let sum_y = profile.red_colorant.y + profile.green_colorant.y + profile.blue_colorant.y;
     let sum_z = profile.red_colorant.z + profile.green_colorant.z + profile.blue_colorant.z;
-    eprintln!("\nSum of colorants: [{:.6}, {:.6}, {:.6}]", sum_x, sum_y, sum_z);
-    eprintln!("Profile white point: [{:.6}, {:.6}, {:.6}]", wp.x, wp.y, wp.z);
+    eprintln!(
+        "\nSum of colorants: [{:.6}, {:.6}, {:.6}]",
+        sum_x, sum_y, sum_z
+    );
+    eprintln!(
+        "Profile white point: [{:.6}, {:.6}, {:.6}]",
+        wp.x, wp.y, wp.z
+    );
 
     if (sum_x - wp.x).abs() < 0.01 && (sum_y - wp.y).abs() < 0.01 && (sum_z - wp.z).abs() < 0.01 {
         eprintln!("=> Colorants sum to white point (as expected for ICC profile)");
@@ -76,14 +93,26 @@ fn check_sm245b_white_point() {
     let srgb = moxcms::ColorProfile::new_srgb();
     eprintln!("\nsRGB white point: {:?}", srgb.white_point);
     eprintln!("sRGB colorants:");
-    eprintln!("  Red:   [{:.6}, {:.6}, {:.6}]", srgb.red_colorant.x, srgb.red_colorant.y, srgb.red_colorant.z);
-    eprintln!("  Green: [{:.6}, {:.6}, {:.6}]", srgb.green_colorant.x, srgb.green_colorant.y, srgb.green_colorant.z);
-    eprintln!("  Blue:  [{:.6}, {:.6}, {:.6}]", srgb.blue_colorant.x, srgb.blue_colorant.y, srgb.blue_colorant.z);
+    eprintln!(
+        "  Red:   [{:.6}, {:.6}, {:.6}]",
+        srgb.red_colorant.x, srgb.red_colorant.y, srgb.red_colorant.z
+    );
+    eprintln!(
+        "  Green: [{:.6}, {:.6}, {:.6}]",
+        srgb.green_colorant.x, srgb.green_colorant.y, srgb.green_colorant.z
+    );
+    eprintln!(
+        "  Blue:  [{:.6}, {:.6}, {:.6}]",
+        srgb.blue_colorant.x, srgb.blue_colorant.y, srgb.blue_colorant.z
+    );
 
     let srgb_sum_x = srgb.red_colorant.x + srgb.green_colorant.x + srgb.blue_colorant.x;
     let srgb_sum_y = srgb.red_colorant.y + srgb.green_colorant.y + srgb.blue_colorant.y;
     let srgb_sum_z = srgb.red_colorant.z + srgb.green_colorant.z + srgb.blue_colorant.z;
-    eprintln!("\nsRGB colorants sum: [{:.6}, {:.6}, {:.6}]", srgb_sum_x, srgb_sum_y, srgb_sum_z);
+    eprintln!(
+        "\nsRGB colorants sum: [{:.6}, {:.6}, {:.6}]",
+        srgb_sum_x, srgb_sum_y, srgb_sum_z
+    );
 }
 
 /// Test what happens with white and black
@@ -156,12 +185,14 @@ fn test_white_and_black() {
     // Test with moxcms
     let mox_profile = moxcms::ColorProfile::new_from_slice(&data).unwrap();
     let mox_srgb = moxcms::ColorProfile::new_srgb();
-    let mox_transform = mox_profile.create_transform_8bit(
-        moxcms::Layout::Rgb,
-        &mox_srgb,
-        moxcms::Layout::Rgb,
-        moxcms::TransformOptions::default(),
-    ).unwrap();
+    let mox_transform = mox_profile
+        .create_transform_8bit(
+            moxcms::Layout::Rgb,
+            &mox_srgb,
+            moxcms::Layout::Rgb,
+            moxcms::TransformOptions::default(),
+        )
+        .unwrap();
 
     eprintln!("\nmoxcms SM245B -> sRGB:");
     for input in [[255u8, 255, 255], [0, 0, 0], [128, 128, 128]] {
@@ -197,8 +228,10 @@ fn examine_moxcms_matrix() {
     eprintln!("SM245B -> sRGB transform matrix:");
     for i in 0..3 {
         let row_sum: f64 = matrix.v[i][0] + matrix.v[i][1] + matrix.v[i][2];
-        eprintln!("  [{:+.6}, {:+.6}, {:+.6}] (sum={:.6})",
-            matrix.v[i][0], matrix.v[i][1], matrix.v[i][2], row_sum);
+        eprintln!(
+            "  [{:+.6}, {:+.6}, {:+.6}] (sum={:.6})",
+            matrix.v[i][0], matrix.v[i][1], matrix.v[i][2], row_sum
+        );
     }
 
     // Column sums
@@ -211,9 +244,15 @@ fn examine_moxcms_matrix() {
     let white_out_x = matrix.v[0][0] + matrix.v[0][1] + matrix.v[0][2];
     let white_out_y = matrix.v[1][0] + matrix.v[1][1] + matrix.v[1][2];
     let white_out_z = matrix.v[2][0] + matrix.v[2][1] + matrix.v[2][2];
-    eprintln!("\nMatrix * [1,1,1]: [{:.6}, {:.6}, {:.6}]", white_out_x, white_out_y, white_out_z);
+    eprintln!(
+        "\nMatrix * [1,1,1]: [{:.6}, {:.6}, {:.6}]",
+        white_out_x, white_out_y, white_out_z
+    );
 
-    if (white_out_x - 1.0).abs() < 0.001 && (white_out_y - 1.0).abs() < 0.001 && (white_out_z - 1.0).abs() < 0.001 {
+    if (white_out_x - 1.0).abs() < 0.001
+        && (white_out_y - 1.0).abs() < 0.001
+        && (white_out_z - 1.0).abs() < 0.001
+    {
         eprintln!("=> Matrix preserves white (rows sum to 1.0)");
     } else {
         eprintln!("=> Matrix does NOT preserve white");
@@ -223,12 +262,18 @@ fn examine_moxcms_matrix() {
     eprintln!("\nSM245B colorant matrix:");
     let sm_matrix = sm245b.colorant_matrix();
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]", sm_matrix.v[i][0], sm_matrix.v[i][1], sm_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            sm_matrix.v[i][0], sm_matrix.v[i][1], sm_matrix.v[i][2]
+        );
     }
 
     eprintln!("\nsRGB colorant matrix:");
     let srgb_matrix = srgb.colorant_matrix();
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]", srgb_matrix.v[i][0], srgb_matrix.v[i][1], srgb_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            srgb_matrix.v[i][0], srgb_matrix.v[i][1], srgb_matrix.v[i][2]
+        );
     }
 }

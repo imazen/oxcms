@@ -102,9 +102,9 @@ fn test_cmyk_to_srgb_transform() {
     // Note: moxcms uses Layout::Rgba for CMYK (4 channels: C, M, Y, K)
     // and Layout::Rgb for RGB (3 channels)
     let transform = match cmyk_profile.create_transform_8bit(
-        moxcms::Layout::Rgba,  // 4 channels for CMYK
+        moxcms::Layout::Rgba, // 4 channels for CMYK
         &srgb_profile,
-        moxcms::Layout::Rgb,   // 3 channels for RGB
+        moxcms::Layout::Rgb, // 3 channels for RGB
         moxcms::TransformOptions::default(),
     ) {
         Ok(t) => t,
@@ -136,8 +136,7 @@ fn test_cmyk_to_srgb_transform() {
 
         eprintln!(
             "  C={} M={} Y={} K={} ({}) -> R={} G={} B={}",
-            cmyk[0], cmyk[1], cmyk[2], cmyk[3], name,
-            rgb_out[0], rgb_out[1], rgb_out[2]
+            cmyk[0], cmyk[1], cmyk[2], cmyk[3], name, rgb_out[0], rgb_out[1], rgb_out[2]
         );
     }
 }
@@ -178,9 +177,9 @@ fn test_cmyk_to_srgb_lcms2_parity() {
     // moxcms uses Layout::Rgba for 4-channel CMYK, Layout::Rgb for 3-channel RGB
     let moxcms_srgb = moxcms::ColorProfile::new_srgb();
     let moxcms_transform = match moxcms_cmyk.create_transform_8bit(
-        moxcms::Layout::Rgba,  // 4 channels for CMYK
+        moxcms::Layout::Rgba, // 4 channels for CMYK
         &moxcms_srgb,
-        moxcms::Layout::Rgb,   // 3 channels for RGB
+        moxcms::Layout::Rgb, // 3 channels for RGB
         moxcms::TransformOptions::default(),
     ) {
         Ok(t) => t,
@@ -294,9 +293,9 @@ fn test_srgb_to_cmyk_transform() {
     // Create sRGB -> CMYK transform
     // moxcms uses Layout::Rgb for 3-channel RGB, Layout::Rgba for 4-channel CMYK
     let transform = match srgb_profile.create_transform_8bit(
-        moxcms::Layout::Rgb,   // 3 channels for RGB
+        moxcms::Layout::Rgb, // 3 channels for RGB
         &cmyk_profile,
-        moxcms::Layout::Rgba,  // 4 channels for CMYK
+        moxcms::Layout::Rgba, // 4 channels for CMYK
         moxcms::TransformOptions::default(),
     ) {
         Ok(t) => t,
@@ -328,8 +327,7 @@ fn test_srgb_to_cmyk_transform() {
 
         eprintln!(
             "  R={} G={} B={} ({}) -> C={} M={} Y={} K={}",
-            rgb[0], rgb[1], rgb[2], name,
-            cmyk_out[0], cmyk_out[1], cmyk_out[2], cmyk_out[3]
+            rgb[0], rgb[1], rgb[2], name, cmyk_out[0], cmyk_out[1], cmyk_out[2], cmyk_out[3]
         );
     }
 }
@@ -362,9 +360,9 @@ fn test_cmyk_round_trip() {
     // Create transforms
     // moxcms uses Layout::Rgb for 3-channel RGB, Layout::Rgba for 4-channel CMYK
     let rgb_to_cmyk = match srgb_profile.create_transform_8bit(
-        moxcms::Layout::Rgb,   // 3 channels for RGB
+        moxcms::Layout::Rgb, // 3 channels for RGB
         &cmyk_profile,
-        moxcms::Layout::Rgba,  // 4 channels for CMYK
+        moxcms::Layout::Rgba, // 4 channels for CMYK
         moxcms::TransformOptions::default(),
     ) {
         Ok(t) => t,
@@ -375,9 +373,9 @@ fn test_cmyk_round_trip() {
     };
 
     let cmyk_to_rgb = match cmyk_profile.create_transform_8bit(
-        moxcms::Layout::Rgba,  // 4 channels for CMYK
+        moxcms::Layout::Rgba, // 4 channels for CMYK
         &srgb_profile,
-        moxcms::Layout::Rgb,   // 3 channels for RGB
+        moxcms::Layout::Rgb, // 3 channels for RGB
         moxcms::TransformOptions::default(),
     ) {
         Ok(t) => t,
@@ -411,9 +409,16 @@ fn test_cmyk_round_trip() {
 
         eprintln!(
             "  [{},{},{}] -> CMYK [{},{},{},{}] -> [{},{},{}] (diff={})",
-            rgb[0], rgb[1], rgb[2],
-            cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-            rgb_back[0], rgb_back[1], rgb_back[2],
+            rgb[0],
+            rgb[1],
+            rgb[2],
+            cmyk[0],
+            cmyk[1],
+            cmyk[2],
+            cmyk[3],
+            rgb_back[0],
+            rgb_back[1],
+            rgb_back[2],
             diff
         );
     }

@@ -3,9 +3,9 @@
 //! Tests all ICC profiles from the testdata corpus against qcms, moxcms, lcms2, and skcms.
 //! Validates parsing, transform creation, and output consistency.
 
+use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
 
 /// Get the testdata directory
 fn testdata_dir() -> PathBuf {
@@ -28,7 +28,7 @@ fn collect_profiles() -> Vec<PathBuf> {
                 let path = entry.path();
                 if path.is_dir() {
                     walk_dir(&path, profiles);
-                } else if path.extension().map_or(false, |e| e == "icc" || e == "icm") {
+                } else if path.extension().is_some_and(|e| e == "icc" || e == "icm") {
                     profiles.push(path);
                 }
             }
@@ -78,8 +78,11 @@ fn test_corpus_profile_parsing() {
         // Skip obviously malformed test profiles (meant for error handling tests)
         let filename = profile_path.file_name().unwrap().to_string_lossy();
         let path_str = profile_path.to_string_lossy();
-        if filename.contains("bad") || filename.contains("toosmall")
-            || filename.contains("fuzz") || path_str.contains("/fuzz/") {
+        if filename.contains("bad")
+            || filename.contains("toosmall")
+            || filename.contains("fuzz")
+            || path_str.contains("/fuzz/")
+        {
             continue;
         }
 
@@ -158,7 +161,10 @@ fn test_corpus_profile_parsing() {
         eprintln!("\n  Profiles with parsing differences:");
         for (path, q, m, l, s) in failures.iter().take(10) {
             let name = path.file_name().unwrap().to_string_lossy();
-            eprintln!("    {}: qcms={}, moxcms={}, lcms2={}, skcms={}", name, q, m, l, s);
+            eprintln!(
+                "    {}: qcms={}, moxcms={}, lcms2={}, skcms={}",
+                name, q, m, l, s
+            );
         }
         if failures.len() > 10 {
             eprintln!("    ... and {} more", failures.len() - 10);
@@ -226,7 +232,8 @@ fn test_corpus_transform_parity() {
             || filename.contains("Lower_") // color.org test patterns
             || filename.contains("Phase_One") // Camera profile
             || filename.starts_with("0") // qcms fuzz samples
-            || filename.starts_with("1") // qcms fuzz samples
+            || filename.starts_with("1")
+        // qcms fuzz samples
         {
             continue;
         }
@@ -248,7 +255,10 @@ fn test_corpus_transform_parity() {
         };
 
         // Skip non-RGB profiles (CMYK, Gray, Lab, etc.) - they need different layouts
-        if !matches!(lcms2_profile.color_space(), lcms2::ColorSpaceSignature::RgbData) {
+        if !matches!(
+            lcms2_profile.color_space(),
+            lcms2::ColorSpaceSignature::RgbData
+        ) {
             continue;
         }
 
@@ -346,8 +356,8 @@ fn test_corpus_transform_parity() {
                 }
                 // How well does moxcms match browser consensus?
                 let browser_avg = (qcms_data[i] as i32 + skcms_out[i] as i32) / 2;
-                max_moxcms_vs_browser = max_moxcms_vs_browser
-                    .max((moxcms_out[i] as i32 - browser_avg).abs());
+                max_moxcms_vs_browser =
+                    max_moxcms_vs_browser.max((moxcms_out[i] as i32 - browser_avg).abs());
             }
         }
 
@@ -391,15 +401,16 @@ fn test_corpus_transform_parity() {
     // - Different TRC interpolation methods
     // - LUT precision differences
     let acceptable = identical + small_diff;
-    let parity_pct = if tested > 0 { acceptable * 100 / tested } else { 0 };
+    let parity_pct = if tested > 0 {
+        acceptable * 100 / tested
+    } else {
+        0
+    };
     eprintln!("    Parity:     {}% acceptable", parity_pct);
 
     // Log but don't fail - this is informational
     // Real-world CMS implementations have legitimate differences
-    assert!(
-        tested > 0,
-        "Expected to test at least some profiles"
-    );
+    assert!(tested > 0, "Expected to test at least some profiles");
 }
 
 /// Test that sRGB profiles from different sources produce consistent results
@@ -414,9 +425,14 @@ fn test_srgb_profile_consistency() {
     let srgb_profiles: Vec<PathBuf> = [
         profiles_dir.join("sRGB.icc"),
         profiles_dir.join("icc.org").join("sRGB2014.icc"),
-        profiles_dir.join("icc.org").join("sRGB_v4_ICC_preference.icc"),
+        profiles_dir
+            .join("icc.org")
+            .join("sRGB_v4_ICC_preference.icc"),
         profiles_dir.join("qcms").join("sRGB_lcms.icc"),
-        profiles_dir.join("skcms").join("color.org").join("sRGB2014.icc"),
+        profiles_dir
+            .join("skcms")
+            .join("color.org")
+            .join("sRGB2014.icc"),
         compact_dir.join("sRGB-v2-nano.icc"),
         compact_dir.join("sRGB-v2-micro.icc"),
         compact_dir.join("sRGB-v4.icc"),

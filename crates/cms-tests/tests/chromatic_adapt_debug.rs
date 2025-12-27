@@ -31,7 +31,10 @@ fn debug_chromatic_adaptation() {
     let sum_x = profile.red_colorant.x + profile.green_colorant.x + profile.blue_colorant.x;
     let sum_y = profile.red_colorant.y + profile.green_colorant.y + profile.blue_colorant.y;
     let sum_z = profile.red_colorant.z + profile.green_colorant.z + profile.blue_colorant.z;
-    eprintln!("SM245B colorant sum: [{:.6}, {:.6}, {:.6}]", sum_x, sum_y, sum_z);
+    eprintln!(
+        "SM245B colorant sum: [{:.6}, {:.6}, {:.6}]",
+        sum_x, sum_y, sum_z
+    );
 
     // D50 reference
     let d50 = moxcms::Chromaticity::D50.to_xyzd();
@@ -49,31 +52,39 @@ fn debug_chromatic_adaptation() {
 
     eprintln!("\nSM245B rgb_to_xyz_matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            sm_xyz_matrix.v[i][0], sm_xyz_matrix.v[i][1], sm_xyz_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            sm_xyz_matrix.v[i][0], sm_xyz_matrix.v[i][1], sm_xyz_matrix.v[i][2]
+        );
     }
 
     eprintln!("\nsRGB rgb_to_xyz_matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            srgb_xyz_matrix.v[i][0], srgb_xyz_matrix.v[i][1], srgb_xyz_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            srgb_xyz_matrix.v[i][0], srgb_xyz_matrix.v[i][1], srgb_xyz_matrix.v[i][2]
+        );
     }
 
     // The transform matrix used
     let transform_matrix = profile.transform_matrix(&srgb);
     eprintln!("\nTransform matrix (SM245B -> sRGB):");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            transform_matrix.v[i][0], transform_matrix.v[i][1], transform_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            transform_matrix.v[i][0], transform_matrix.v[i][1], transform_matrix.v[i][2]
+        );
     }
 
     // Test a transform
-    let mox_transform = profile.create_transform_8bit(
-        moxcms::Layout::Rgb,
-        &srgb,
-        moxcms::Layout::Rgb,
-        moxcms::TransformOptions::default(),
-    ).unwrap();
+    let mox_transform = profile
+        .create_transform_8bit(
+            moxcms::Layout::Rgb,
+            &srgb,
+            moxcms::Layout::Rgb,
+            moxcms::TransformOptions::default(),
+        )
+        .unwrap();
 
     let mut out = [0u8; 3];
     mox_transform.transform(&[128, 128, 128], &mut out).unwrap();
@@ -119,12 +130,12 @@ fn compare_skcms_internal_matrix() {
 
         // Test pure colors to understand the matrix
         let test_inputs: &[[u8; 3]] = &[
-            [255, 0, 0],   // Pure red
-            [0, 255, 0],   // Pure green
-            [0, 0, 255],   // Pure blue
-            [128, 0, 0],   // Half red
-            [0, 128, 0],   // Half green
-            [0, 0, 128],   // Half blue
+            [255, 0, 0], // Pure red
+            [0, 255, 0], // Pure green
+            [0, 0, 255], // Pure blue
+            [128, 0, 0], // Half red
+            [0, 128, 0], // Half green
+            [0, 0, 128], // Half blue
         ];
 
         eprintln!("skcms SM245B -> sRGB transforms:");
@@ -147,12 +158,14 @@ fn compare_skcms_internal_matrix() {
         // Same tests with moxcms
         let mox_profile = moxcms::ColorProfile::new_from_slice(&data).unwrap();
         let mox_srgb = moxcms::ColorProfile::new_srgb();
-        let mox_transform = mox_profile.create_transform_8bit(
-            moxcms::Layout::Rgb,
-            &mox_srgb,
-            moxcms::Layout::Rgb,
-            moxcms::TransformOptions::default(),
-        ).unwrap();
+        let mox_transform = mox_profile
+            .create_transform_8bit(
+                moxcms::Layout::Rgb,
+                &mox_srgb,
+                moxcms::Layout::Rgb,
+                moxcms::TransformOptions::default(),
+            )
+            .unwrap();
 
         eprintln!("\nmoxcms SM245B -> sRGB transforms:");
         for input in test_inputs {

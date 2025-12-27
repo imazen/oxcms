@@ -66,8 +66,10 @@ fn test_with_cicp_disabled() {
     let srgb = moxcms::ColorProfile::new_srgb();
 
     // Create transform with CICP ENABLED (default)
-    let mut options_cicp = moxcms::TransformOptions::default();
-    options_cicp.allow_use_cicp_transfer = true;
+    let options_cicp = moxcms::TransformOptions {
+        allow_use_cicp_transfer: true,
+        ..Default::default()
+    };
 
     let transform_cicp = profile
         .create_transform_8bit(
@@ -79,8 +81,10 @@ fn test_with_cicp_disabled() {
         .unwrap();
 
     // Create transform with CICP DISABLED
-    let mut options_no_cicp = moxcms::TransformOptions::default();
-    options_no_cicp.allow_use_cicp_transfer = false;
+    let options_no_cicp = moxcms::TransformOptions {
+        allow_use_cicp_transfer: false,
+        ..Default::default()
+    };
 
     let transform_no_cicp = profile
         .create_transform_8bit(
@@ -103,10 +107,15 @@ fn test_with_cicp_disabled() {
         let mut out_no_cicp = [0u8; 3];
 
         transform_cicp.transform(&color, &mut out_cicp).unwrap();
-        transform_no_cicp.transform(&color, &mut out_no_cicp).unwrap();
+        transform_no_cicp
+            .transform(&color, &mut out_no_cicp)
+            .unwrap();
 
         let diff = out_cicp[0] as i32 - out_no_cicp[0] as i32;
-        eprintln!(" {:3}  |   {:3}   |   {:3}    | {:+3}", v, out_cicp[0], out_no_cicp[0], diff);
+        eprintln!(
+            " {:3}  |   {:3}   |   {:3}    | {:+3}",
+            v, out_cicp[0], out_no_cicp[0], diff
+        );
     }
 
     // Also compare with skcms reference
@@ -137,7 +146,10 @@ fn test_with_cicp_disabled() {
             );
 
             let diff = out_mox[0] as i32 - out_skcms[0] as i32;
-            eprintln!(" {:3}  |  {:3}   |  {:3}  | {:+3}", v, out_mox[0], out_skcms[0], diff);
+            eprintln!(
+                " {:3}  |  {:3}   |  {:3}  | {:+3}",
+                v, out_mox[0], out_skcms[0], diff
+            );
         }
     }
 }

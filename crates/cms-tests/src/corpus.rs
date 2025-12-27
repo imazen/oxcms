@@ -72,7 +72,7 @@ impl TestCorpus {
         for entry in std::fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "icc" || e == "icm") {
+            if path.extension().is_some_and(|e| e == "icc" || e == "icm") {
                 let name = path
                     .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())
@@ -98,7 +98,10 @@ impl TestCorpus {
 
     /// Get profiles from a specific source
     pub fn profiles_from(&self, source: ProfileSource) -> Vec<&TestProfile> {
-        self.profiles.iter().filter(|p| p.source == source).collect()
+        self.profiles
+            .iter()
+            .filter(|p| p.source == source)
+            .collect()
     }
 
     /// Get profile by name

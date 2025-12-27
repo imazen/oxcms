@@ -2,7 +2,7 @@
 //!
 //! Compares oxcms output against reference implementations.
 
-use crate::accuracy::{compare_rgb_buffers, DeltaEStats};
+use crate::accuracy::{DeltaEStats, compare_rgb_buffers};
 use std::fmt;
 
 /// Reference CMS implementation for comparison

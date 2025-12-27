@@ -169,7 +169,9 @@ fn test_cmyk_to_srgb_swop() {
             assert!(
                 rgb[0] < 50 && rgb[1] < 50 && rgb[2] < 50,
                 "Black should map to dark gray, got RGB({},{},{})",
-                rgb[0], rgb[1], rgb[2]
+                rgb[0],
+                rgb[1],
+                rgb[2]
             );
         }
     }
@@ -274,7 +276,8 @@ fn test_cmyk_srgb_roundtrip() {
                     let mut roundtrip = [0u8; 4];
 
                     to_rgb.transform_pixels(slice::from_ref(&original), slice::from_mut(&mut rgb));
-                    to_cmyk.transform_pixels(slice::from_ref(&rgb), slice::from_mut(&mut roundtrip));
+                    to_cmyk
+                        .transform_pixels(slice::from_ref(&rgb), slice::from_mut(&mut roundtrip));
 
                     // Calculate max channel difference
                     let delta = [
@@ -447,7 +450,14 @@ fn test_cmyk_to_lab() {
         transform.transform_pixels(slice::from_ref(cmyk_val), slice::from_mut(&mut lab_out));
         println!(
             "  {} CMYK({},{},{},{}) -> Lab({:.2},{:.2},{:.2})",
-            name, cmyk_val[0], cmyk_val[1], cmyk_val[2], cmyk_val[3], lab_out[0], lab_out[1], lab_out[2]
+            name,
+            cmyk_val[0],
+            cmyk_val[1],
+            cmyk_val[2],
+            cmyk_val[3],
+            lab_out[0],
+            lab_out[1],
+            lab_out[2]
         );
 
         // Check L* range
@@ -537,10 +547,10 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
         }
     }
 
-    let lcms2_result = transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_pixels)
-        .expect("lcms2 CMYK->RGB failed");
-    let moxcms_result = transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_pixels)
-        .expect("moxcms CMYK->RGB failed");
+    let lcms2_result =
+        transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_pixels).expect("lcms2 CMYK->RGB failed");
+    let moxcms_result =
+        transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_pixels).expect("moxcms CMYK->RGB failed");
 
     // Compare outputs
     let num_pixels = cmyk_pixels.len() / 4;
@@ -551,7 +561,8 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
     for i in 0..num_pixels {
         let idx = i * 3;
         for c in 0..3 {
-            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
+            let diff =
+                (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
             if diff > 0 {
                 diff_count += 1;
                 total_diff += diff as u64;
@@ -602,10 +613,10 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
         }
     }
 
-    let lcms2_result = transform_lcms2_rgb_to_cmyk(&profile_data, &rgb_pixels)
-        .expect("lcms2 RGB->CMYK failed");
-    let moxcms_result = transform_moxcms_rgb_to_cmyk(&profile_data, &rgb_pixels)
-        .expect("moxcms RGB->CMYK failed");
+    let lcms2_result =
+        transform_lcms2_rgb_to_cmyk(&profile_data, &rgb_pixels).expect("lcms2 RGB->CMYK failed");
+    let moxcms_result =
+        transform_moxcms_rgb_to_cmyk(&profile_data, &rgb_pixels).expect("moxcms RGB->CMYK failed");
 
     // Compare outputs
     let num_pixels = rgb_pixels.len() / 3;
@@ -616,7 +627,8 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
     for i in 0..num_pixels {
         let idx = i * 4;
         for c in 0..4 {
-            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
+            let diff =
+                (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
             if diff > 0 {
                 diff_count += 1;
                 total_diff += diff as u64;
@@ -664,11 +676,11 @@ fn test_cmyk_parity_all_profiles() {
 
     // Simple test input
     let cmyk_input: Vec<u8> = vec![
-        0, 0, 0, 0,       // White
-        0, 0, 0, 255,     // Black
-        255, 0, 0, 0,     // Cyan
-        0, 255, 0, 0,     // Magenta
-        0, 0, 255, 0,     // Yellow
+        0, 0, 0, 0, // White
+        0, 0, 0, 255, // Black
+        255, 0, 0, 0, // Cyan
+        0, 255, 0, 0, // Magenta
+        0, 0, 255, 0, // Yellow
         128, 128, 128, 128, // 50% all
     ];
 
@@ -693,4 +705,3 @@ fn test_cmyk_parity_all_profiles() {
         println!("  {}: max_diff={}", name, max_diff);
     }
 }
-

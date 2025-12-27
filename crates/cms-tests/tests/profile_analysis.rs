@@ -146,7 +146,10 @@ fn test_analyze_icc_headers() {
         let version_major = data[8];
         let version_minor = (data[9] >> 4) & 0x0F;
         let version_patch = data[9] & 0x0F;
-        eprintln!("  Version: {}.{}.{}", version_major, version_minor, version_patch);
+        eprintln!(
+            "  Version: {}.{}.{}",
+            version_major, version_minor, version_patch
+        );
 
         let device_class = String::from_utf8_lossy(&data[12..16]);
         eprintln!("  Device class: '{}'", device_class.trim_matches('\0'));
@@ -254,13 +257,20 @@ fn test_analyze_parametric_curves() {
 
                     if tag_offset + 4 <= data.len() {
                         let type_sig = String::from_utf8_lossy(&data[tag_offset..tag_offset + 4]);
-                        eprintln!("  {} tag at {}, size {}, type '{}'",
+                        eprintln!(
+                            "  {} tag at {}, size {}, type '{}'",
                             String::from_utf8_lossy(sig),
-                            tag_offset, tag_size, type_sig.trim_matches('\0'));
+                            tag_offset,
+                            tag_size,
+                            type_sig.trim_matches('\0')
+                        );
 
                         // If it's parametric, check the function type
-                        if &data[tag_offset..tag_offset + 4] == b"para" && tag_offset + 10 <= data.len() {
-                            let func_type = u16::from_be_bytes([data[tag_offset + 8], data[tag_offset + 9]]);
+                        if &data[tag_offset..tag_offset + 4] == b"para"
+                            && tag_offset + 10 <= data.len()
+                        {
+                            let func_type =
+                                u16::from_be_bytes([data[tag_offset + 8], data[tag_offset + 9]]);
                             eprintln!("    Parametric function type: {}", func_type);
                         }
                     }

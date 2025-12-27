@@ -29,5 +29,5 @@ pub mod parity;
 pub mod patterns;
 pub mod reference;
 
-pub use accuracy::{compare_rgb_buffers, delta_e_2000, DeltaEStats};
+pub use accuracy::{DeltaEStats, compare_rgb_buffers, delta_e_2000};
 pub use parity::ParityTest;

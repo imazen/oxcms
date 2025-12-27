@@ -73,7 +73,7 @@ fn test_corpus_profiles() {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "icc" || e == "icm") {
+            if path.extension().is_some_and(|e| e == "icc" || e == "icm") {
                 let name = path.file_name().unwrap().to_string_lossy();
                 let data = match std::fs::read(&path) {
                     Ok(d) => d,

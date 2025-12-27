@@ -1,4 +1,6 @@
 //! TRC (Tone Reproduction Curve) Interpolation Analysis
+#![allow(dead_code)]
+#![allow(clippy::needless_range_loop)]
 //!
 //! This test suite investigates profiles where moxcms differs from browser
 //! consensus (skcms/qcms) to understand TRC curve handling differences.
@@ -153,8 +155,13 @@ fn analyze_profile_trc(path: &Path) -> Option<TrcAnalysis> {
         if moxcms_vs_browser > 2 || browser_diff > 2 {
             details.push(format!(
                 "  v={}: qcms={} skcms={} moxcms={} lcms2={} | browser_diff={} mox_vs_browser={}",
-                v, qcms_out[0], skcms_out[0], moxcms_out[0], lcms2_out[0],
-                browser_diff, moxcms_vs_browser
+                v,
+                qcms_out[0],
+                skcms_out[0],
+                moxcms_out[0],
+                lcms2_out[0],
+                browser_diff,
+                moxcms_vs_browser
             ));
         }
     }
@@ -198,8 +205,14 @@ fn test_trc_interpolation_flagged_profiles() {
     for result in &results {
         eprintln!("Profile: {}", result.name);
         eprintln!("  Type: {} ({})", result.profile_type, result.trc_type);
-        eprintln!("  Max browser diff (qcms vs skcms): {}", result.max_browser_diff);
-        eprintln!("  Max moxcms vs browser consensus: {}", result.max_moxcms_vs_browser);
+        eprintln!(
+            "  Max browser diff (qcms vs skcms): {}",
+            result.max_browser_diff
+        );
+        eprintln!(
+            "  Max moxcms vs browser consensus: {}",
+            result.max_moxcms_vs_browser
+        );
         eprintln!("  Worst input value: {}", result.worst_input);
 
         if !result.details.is_empty() {
@@ -215,9 +228,18 @@ fn test_trc_interpolation_flagged_profiles() {
     }
 
     // Categorize results
-    let exact_match: Vec<_> = results.iter().filter(|r| r.max_moxcms_vs_browser == 0).collect();
-    let acceptable: Vec<_> = results.iter().filter(|r| r.max_moxcms_vs_browser > 0 && r.max_moxcms_vs_browser <= 2).collect();
-    let differs: Vec<_> = results.iter().filter(|r| r.max_moxcms_vs_browser > 2).collect();
+    let exact_match: Vec<_> = results
+        .iter()
+        .filter(|r| r.max_moxcms_vs_browser == 0)
+        .collect();
+    let acceptable: Vec<_> = results
+        .iter()
+        .filter(|r| r.max_moxcms_vs_browser > 0 && r.max_moxcms_vs_browser <= 2)
+        .collect();
+    let differs: Vec<_> = results
+        .iter()
+        .filter(|r| r.max_moxcms_vs_browser > 2)
+        .collect();
 
     eprintln!("=== Summary ===");
     eprintln!("Exact match with browser: {} profiles", exact_match.len());
@@ -227,7 +249,10 @@ fn test_trc_interpolation_flagged_profiles() {
     if !differs.is_empty() {
         eprintln!("\nProfiles needing investigation:");
         for r in &differs {
-            eprintln!("  {} - max diff {} at input {}", r.name, r.max_moxcms_vs_browser, r.worst_input);
+            eprintln!(
+                "  {} - max diff {} at input {}",
+                r.name, r.max_moxcms_vs_browser, r.worst_input
+            );
         }
     }
 }
@@ -274,9 +299,18 @@ fn test_trc_deep_dive_monitor_profiles() {
         if moxcms_profile.is_matrix_shaper() {
             let matrix = moxcms_profile.colorant_matrix();
             eprintln!("  Colorant matrix:");
-            eprintln!("    R: [{:.6}, {:.6}, {:.6}]", matrix.v[0][0], matrix.v[0][1], matrix.v[0][2]);
-            eprintln!("    G: [{:.6}, {:.6}, {:.6}]", matrix.v[1][0], matrix.v[1][1], matrix.v[1][2]);
-            eprintln!("    B: [{:.6}, {:.6}, {:.6}]", matrix.v[2][0], matrix.v[2][1], matrix.v[2][2]);
+            eprintln!(
+                "    R: [{:.6}, {:.6}, {:.6}]",
+                matrix.v[0][0], matrix.v[0][1], matrix.v[0][2]
+            );
+            eprintln!(
+                "    G: [{:.6}, {:.6}, {:.6}]",
+                matrix.v[1][0], matrix.v[1][1], matrix.v[1][2]
+            );
+            eprintln!(
+                "    B: [{:.6}, {:.6}, {:.6}]",
+                matrix.v[2][0], matrix.v[2][1], matrix.v[2][2]
+            );
         }
 
         eprintln!();
@@ -293,7 +327,13 @@ fn test_trc_type_distribution() {
     let mut lut_count = 0;
     let mut total = 0;
 
-    let subdirs = ["lcms2", "qcms", "skcms/misc", "skcms/mobile", "skcms/unusual"];
+    let subdirs = [
+        "lcms2",
+        "qcms",
+        "skcms/misc",
+        "skcms/mobile",
+        "skcms/unusual",
+    ];
 
     for subdir in &subdirs {
         let dir = profiles_dir.join(subdir);
@@ -324,10 +364,20 @@ fn test_trc_type_distribution() {
     }
 
     eprintln!("Total profiles parsed by moxcms: {}", total);
-    eprintln!("Matrix-shaper profiles: {} ({:.1}%)", matrix_shaper_count, 100.0 * matrix_shaper_count as f64 / total as f64);
-    eprintln!("LUT-based profiles: {} ({:.1}%)", lut_count, 100.0 * lut_count as f64 / total as f64);
+    eprintln!(
+        "Matrix-shaper profiles: {} ({:.1}%)",
+        matrix_shaper_count,
+        100.0 * matrix_shaper_count as f64 / total as f64
+    );
+    eprintln!(
+        "LUT-based profiles: {} ({:.1}%)",
+        lut_count,
+        100.0 * lut_count as f64 / total as f64
+    );
     eprintln!();
-    eprintln!("Note: TRC interpolation differences typically affect LUT-based profiles more than matrix-shaper profiles.");
+    eprintln!(
+        "Note: TRC interpolation differences typically affect LUT-based profiles more than matrix-shaper profiles."
+    );
 }
 
 /// Test specific dark color handling where differences often occur
@@ -437,7 +487,10 @@ fn test_trc_dark_color_handling() {
             eprintln!("  Input | qcms | skcms | moxcms | diff");
             eprintln!("  ------|------|-------|--------|-----");
             for (input, qcms, skcms, moxcms, diff) in &diffs {
-                eprintln!("  {:5} | {:4} | {:5} | {:6} | {:4}", input, qcms, skcms, moxcms, diff);
+                eprintln!(
+                    "  {:5} | {:4} | {:5} | {:6} | {:4}",
+                    input, qcms, skcms, moxcms, diff
+                );
             }
         }
         eprintln!();

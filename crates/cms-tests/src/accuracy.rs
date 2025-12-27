@@ -123,8 +123,7 @@ pub fn delta_e_2000(lab1: [f64; 3], lab2: [f64; 3]) -> f64 {
     };
 
     // Calculate T
-    let t = 1.0
-        - 0.17 * (h_avg_prime - 30.0).to_radians().cos()
+    let t = 1.0 - 0.17 * (h_avg_prime - 30.0).to_radians().cos()
         + 0.24 * (2.0 * h_avg_prime).to_radians().cos()
         + 0.32 * (3.0 * h_avg_prime + 6.0).to_radians().cos()
         - 0.20 * (4.0 * h_avg_prime - 63.0).to_radians().cos();

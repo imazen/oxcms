@@ -4,7 +4,7 @@
 //! for all supported operations.
 
 use cms_tests::accuracy::compare_rgb_buffers;
-use cms_tests::patterns::{generate_pattern, sizes, TestPattern};
+use cms_tests::patterns::{TestPattern, generate_pattern, sizes};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 
 /// Compare moxcms and lcms2 for sRGB identity transform
@@ -85,8 +85,16 @@ fn document_math_differences() {
     let mut differences = Vec::new();
     for i in 0..(input.len() / 3) {
         let idx = i * 3;
-        let mox = [moxcms_output[idx], moxcms_output[idx + 1], moxcms_output[idx + 2]];
-        let lcms = [lcms2_output[idx], lcms2_output[idx + 1], lcms2_output[idx + 2]];
+        let mox = [
+            moxcms_output[idx],
+            moxcms_output[idx + 1],
+            moxcms_output[idx + 2],
+        ];
+        let lcms = [
+            lcms2_output[idx],
+            lcms2_output[idx + 1],
+            lcms2_output[idx + 2],
+        ];
 
         if mox != lcms {
             differences.push((i, mox, lcms));
@@ -95,7 +103,11 @@ fn document_math_differences() {
 
     if !differences.is_empty() {
         eprintln!("\n=== MATH DIFFERENCES: moxcms vs lcms2 ===");
-        eprintln!("Found {} differing pixels out of {}", differences.len(), input.len() / 3);
+        eprintln!(
+            "Found {} differing pixels out of {}",
+            differences.len(),
+            input.len() / 3
+        );
         for (i, mox, lcms) in differences.iter().take(10) {
             let input_rgb = [input[i * 3], input[i * 3 + 1], input[i * 3 + 2]];
             eprintln!(

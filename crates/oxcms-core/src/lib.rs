@@ -55,20 +55,34 @@ pub use transform::{Layout, RenderingIntent, Transform, TransformOptions};
 
 // Re-export useful moxcms types directly
 pub use moxcms::{
-    // Color spaces and coordinates
-    Lab, Xyz, Xyzd, XyY,
-    // Matrices
-    Matrix3d, Matrix3f, Vector3d, Vector3f,
-    // Chromatic adaptation
-    adapt_to_d50, adapt_to_d50_d, Chromaticity,
-    // White points
-    WHITE_POINT_D50, WHITE_POINT_D65,
-    // Profile types
-    DataColorSpace, ProfileClass, ProfileVersion,
+    Chromaticity,
+    CicpColorPrimaries,
     // CICP
-    CicpProfile, CicpColorPrimaries, TransferCharacteristics,
+    CicpProfile,
+    // Profile types
+    DataColorSpace,
+    // Color spaces and coordinates
+    Lab,
+    // Matrices
+    Matrix3d,
+    Matrix3f,
+    ProfileClass,
+    ProfileVersion,
     // Tone curves
-    ToneReprCurve, curve_from_gamma,
+    ToneReprCurve,
+    TransferCharacteristics,
+    Vector3d,
+    Vector3f,
+    // White points
+    WHITE_POINT_D50,
+    WHITE_POINT_D65,
+    XyY,
+    Xyz,
+    Xyzd,
+    // Chromatic adaptation
+    adapt_to_d50,
+    adapt_to_d50_d,
+    curve_from_gamma,
 };
 
 /// Version of oxcms

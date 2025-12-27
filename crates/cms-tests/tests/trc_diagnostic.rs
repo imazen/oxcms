@@ -41,14 +41,18 @@ fn diagnose_sm245b_trc() {
 
     eprintln!("\nSM245B colorant matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            sm_matrix.v[i][0], sm_matrix.v[i][1], sm_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            sm_matrix.v[i][0], sm_matrix.v[i][1], sm_matrix.v[i][2]
+        );
     }
 
     eprintln!("\nsRGB colorant matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            srgb_matrix.v[i][0], srgb_matrix.v[i][1], srgb_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            srgb_matrix.v[i][0], srgb_matrix.v[i][1], srgb_matrix.v[i][2]
+        );
     }
 
     // Create transforms in both directions and test specific values
@@ -104,15 +108,13 @@ fn diagnose_sm245b_trc() {
         sm_to_srgb.transform(&input, &mut sm_to_srgb_out).unwrap();
         srgb_to_sm.transform(&input, &mut srgb_to_sm_out).unwrap();
         sm_identity.transform(&input, &mut sm_identity_out).unwrap();
-        srgb_identity.transform(&input, &mut srgb_identity_out).unwrap();
+        srgb_identity
+            .transform(&input, &mut srgb_identity_out)
+            .unwrap();
 
         eprintln!(
             "{:.2}  | {:.4}   | {:.4}   | {:.4} | {:.4}",
-            v,
-            sm_to_srgb_out[0],
-            srgb_to_sm_out[0],
-            sm_identity_out[0],
-            srgb_identity_out[0]
+            v, sm_to_srgb_out[0], srgb_to_sm_out[0], sm_identity_out[0], srgb_identity_out[0]
         );
     }
 
@@ -129,7 +131,8 @@ fn diagnose_sm245b_trc() {
         &lcms2_srgb,
         lcms2::PixelFormat::RGB_8,
         lcms2::Intent::Perceptual,
-    ).unwrap();
+    )
+    .unwrap();
 
     eprintln!("8-bit comparison (input 0-255):");
     eprintln!("Input | moxcms | lcms2 | diff");
@@ -154,7 +157,10 @@ fn diagnose_sm245b_trc() {
         lcms2_sm_to_srgb.transform_pixels(&input, &mut lcms_out);
 
         let diff = mox_out[0] as i32 - lcms_out[0] as i32;
-        eprintln!(" {:3}  |  {:3}   |  {:3}  | {:+3}", v, mox_out[0], lcms_out[0], diff);
+        eprintln!(
+            " {:3}  |  {:3}   |  {:3}  | {:+3}",
+            v, mox_out[0], lcms_out[0], diff
+        );
     }
 
     // Test round-trip to isolate where the error comes from
@@ -188,11 +194,15 @@ fn diagnose_sm245b_trc() {
         let mut final_out = [0u8; 3];
 
         srgb_to_sm_8.transform(&input, &mut intermediate).unwrap();
-        sm_to_srgb_8.transform(&intermediate, &mut final_out).unwrap();
+        sm_to_srgb_8
+            .transform(&intermediate, &mut final_out)
+            .unwrap();
 
         let error = final_out[0] as i32 - v as i32;
-        eprintln!(" {:3}  |      {:3}       |      {:3}       |       {:+3}",
-            v, intermediate[0], final_out[0], error);
+        eprintln!(
+            " {:3}  |      {:3}       |      {:3}       |       {:+3}",
+            v, intermediate[0], final_out[0], error
+        );
     }
 }
 
@@ -218,8 +228,10 @@ fn diagnose_transform_matrix() {
 
     eprintln!("SM245B -> sRGB transform matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            transform_matrix.v[i][0], transform_matrix.v[i][1], transform_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            transform_matrix.v[i][0], transform_matrix.v[i][1], transform_matrix.v[i][2]
+        );
     }
 
     // For a neutral color (gray), the matrix should produce roughly equal R, G, B
@@ -230,14 +242,19 @@ fn diagnose_transform_matrix() {
         transform_matrix.v[1][0] + transform_matrix.v[1][1] + transform_matrix.v[1][2],
         transform_matrix.v[2][0] + transform_matrix.v[2][1] + transform_matrix.v[2][2],
     ];
-    eprintln!("  [{:.6}, {:.6}, {:.6}]", white_out[0], white_out[1], white_out[2]);
+    eprintln!(
+        "  [{:.6}, {:.6}, {:.6}]",
+        white_out[0], white_out[1], white_out[2]
+    );
 
     // The inverse direction
     let inverse_matrix = srgb.transform_matrix(&sm245b);
     eprintln!("\nsRGB -> SM245B transform matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]",
-            inverse_matrix.v[i][0], inverse_matrix.v[i][1], inverse_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            inverse_matrix.v[i][0], inverse_matrix.v[i][1], inverse_matrix.v[i][2]
+        );
     }
 }
 

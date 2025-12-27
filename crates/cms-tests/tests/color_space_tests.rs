@@ -67,11 +67,11 @@ fn test_lab_conversion_accuracy() {
     // These are computed using standard sRGB to Lab formulas
     let test_cases = [
         // [R, G, B, expected L, expected a, expected b]
-        ([255u8, 255, 255], (100.0, 0.0, 0.0)),    // White
-        ([0u8, 0, 0], (0.0, 0.0, 0.0)),             // Black
-        ([128u8, 128, 128], (53.585, 0.0, 0.0)),   // Mid gray
-        ([255u8, 0, 0], (53.233, 80.109, 67.220)), // Red
-        ([0u8, 255, 0], (87.737, -86.185, 83.181)), // Green
+        ([255u8, 255, 255], (100.0, 0.0, 0.0)),      // White
+        ([0u8, 0, 0], (0.0, 0.0, 0.0)),              // Black
+        ([128u8, 128, 128], (53.585, 0.0, 0.0)),     // Mid gray
+        ([255u8, 0, 0], (53.233, 80.109, 67.220)),   // Red
+        ([0u8, 255, 0], (87.737, -86.185, 83.181)),  // Green
         ([0u8, 0, 255], (32.303, 79.197, -107.864)), // Blue
     ];
 
@@ -87,15 +87,22 @@ fn test_lab_conversion_accuracy() {
 
         eprintln!(
             "  RGB{:?} -> Lab({:.2}, {:.2}, {:.2}) expected({:.2}, {:.2}, {:.2}) diff:{:.4}",
-            rgb, computed_lab[0], computed_lab[1], computed_lab[2],
-            expected_lab.0, expected_lab.1, expected_lab.2, max_diff
+            rgb,
+            computed_lab[0],
+            computed_lab[1],
+            computed_lab[2],
+            expected_lab.0,
+            expected_lab.1,
+            expected_lab.2,
+            max_diff
         );
 
         // Lab conversions should be accurate to within 0.5
         assert!(
             max_diff < 1.0,
             "Lab conversion error too high for RGB{:?}: {:.4}",
-            rgb, max_diff
+            rgb,
+            max_diff
         );
     }
 }
@@ -105,10 +112,10 @@ fn test_lab_conversion_accuracy() {
 fn test_xyz_to_lab_to_xyz_round_trip() {
     // Use moxcms's built-in XYZ/Lab types
     let test_xyz_values = [
-        moxcms::Xyz::new(0.95047, 1.0, 1.08883),     // D65 white
+        moxcms::Xyz::new(0.95047, 1.0, 1.08883), // D65 white
         moxcms::Xyz::new(0.4124564, 0.2126729, 0.0193339), // sRGB red
-        moxcms::Xyz::new(0.0, 0.0, 0.0),             // Black
-        moxcms::Xyz::new(0.5, 0.5, 0.5),             // Mid gray
+        moxcms::Xyz::new(0.0, 0.0, 0.0),         // Black
+        moxcms::Xyz::new(0.5, 0.5, 0.5),         // Mid gray
     ];
 
     eprintln!("\nXYZ -> Lab -> XYZ round-trip:");
@@ -199,9 +206,9 @@ fn test_rgb_to_grayscale() {
 
     // Test luminance weighting (green should be brightest)
     let primary_colors = [
-        [255u8, 0, 0],   // Red
-        [0, 255, 0],     // Green (should be brightest)
-        [0, 0, 255],     // Blue
+        [255u8, 0, 0], // Red
+        [0, 255, 0],   // Green (should be brightest)
+        [0, 0, 255],   // Blue
     ];
 
     let mut luminances = Vec::new();
@@ -216,7 +223,9 @@ fn test_rgb_to_grayscale() {
     assert!(
         luminances[1] > luminances[0] && luminances[1] > luminances[2],
         "Green should have highest luminance: R={}, G={}, B={}",
-        luminances[0], luminances[1], luminances[2]
+        luminances[0],
+        luminances[1],
+        luminances[2]
     );
 }
 
@@ -250,9 +259,11 @@ fn test_bit_depth_consistency() {
     let test_values_8: Vec<[u8; 3]> = (0..=255)
         .step_by(51)
         .flat_map(|r| {
-            (0..=255)
-                .step_by(51)
-                .flat_map(move |g| (0..=255).step_by(51).map(move |b| [r as u8, g as u8, b as u8]))
+            (0..=255).step_by(51).flat_map(move |g| {
+                (0..=255)
+                    .step_by(51)
+                    .map(move |b| [r as u8, g as u8, b as u8])
+            })
         })
         .collect();
 
@@ -309,12 +320,18 @@ fn test_white_point_handling() {
     let bt2020 = moxcms::ColorProfile::new_bt2020();
 
     eprintln!("\nProfile white points (XYZ):");
-    eprintln!("  sRGB:   ({:.5}, {:.5}, {:.5})",
-              srgb.white_point.x, srgb.white_point.y, srgb.white_point.z);
-    eprintln!("  P3:     ({:.5}, {:.5}, {:.5})",
-              p3.white_point.x, p3.white_point.y, p3.white_point.z);
-    eprintln!("  BT2020: ({:.5}, {:.5}, {:.5})",
-              bt2020.white_point.x, bt2020.white_point.y, bt2020.white_point.z);
+    eprintln!(
+        "  sRGB:   ({:.5}, {:.5}, {:.5})",
+        srgb.white_point.x, srgb.white_point.y, srgb.white_point.z
+    );
+    eprintln!(
+        "  P3:     ({:.5}, {:.5}, {:.5})",
+        p3.white_point.x, p3.white_point.y, p3.white_point.z
+    );
+    eprintln!(
+        "  BT2020: ({:.5}, {:.5}, {:.5})",
+        bt2020.white_point.x, bt2020.white_point.y, bt2020.white_point.z
+    );
 
     // ICC profiles use D50 as the Profile Connection Space (PCS) white point
     // D50 in XYZ (normalized to Y=1) is approximately (0.9642, 1.0, 0.8251)
@@ -330,23 +347,35 @@ fn test_white_point_handling() {
         // Y should be 1.0 (normalized), X and Z should be close to D50 values
         assert!(
             (wp.y - 1.0).abs() < eps,
-            "{} white point Y should be 1.0: got {:.5}", name, wp.y
+            "{} white point Y should be 1.0: got {:.5}",
+            name,
+            wp.y
         );
         assert!(
             (wp.x - d50_xyz_x).abs() < eps,
             "{} white point X should be close to D50: got {:.5}, expected {:.5}",
-            name, wp.x, d50_xyz_x
+            name,
+            wp.x,
+            d50_xyz_x
         );
         assert!(
             (wp.z - d50_xyz_z).abs() < eps,
             "{} white point Z should be close to D50: got {:.5}, expected {:.5}",
-            name, wp.z, d50_xyz_z
+            name,
+            wp.z,
+            d50_xyz_z
         );
     }
 
     // All profiles should have identical white points
-    assert_eq!(srgb.white_point, p3.white_point, "sRGB and P3 should have same white point");
-    assert_eq!(srgb.white_point, bt2020.white_point, "sRGB and BT2020 should have same white point");
+    assert_eq!(
+        srgb.white_point, p3.white_point,
+        "sRGB and P3 should have same white point"
+    );
+    assert_eq!(
+        srgb.white_point, bt2020.white_point,
+        "sRGB and BT2020 should have same white point"
+    );
 }
 
 /// Test RGBA alpha channel preservation
@@ -385,7 +414,8 @@ fn test_alpha_preservation() {
         // Alpha should be preserved exactly
         assert_eq!(
             input[3], output[3],
-            "Alpha channel should be preserved for {}", desc
+            "Alpha channel should be preserved for {}",
+            desc
         );
     }
 }
