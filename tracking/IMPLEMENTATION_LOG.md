@@ -450,6 +450,83 @@ moxcms may be using a different interpolation method for large TRC lookup tables
 
 ---
 
+---
+
+## 2025-12-27: TRUE Root Cause - V2 Profile Chromatic Adaptation Bug
+
+### Investigation Results
+
+The previous hypothesis about TRC interpolation was INCORRECT. Deep investigation reveals the TRUE root cause:
+
+**moxcms does NOT apply chromatic adaptation for V2 ICC profiles**
+
+### Evidence
+
+1. **SM245B Profile Analysis**:
+   - Profile version: **V2.0**
+   - White point tag: D50 `[0.9642, 1.0, 0.8249]`
+   - Colorant sum: D65-ish `[0.9502, 1.0, 1.0877]`
+   - **Colorants do NOT sum to white point!**
+
+2. **sRGB Profile (moxcms built-in)**:
+   - Profile version: **V4.4**
+   - Colorant sum matches white point (correctly adapted to D50)
+
+3. **Transform Behavior**:
+   | Input | skcms Output | moxcms Output |
+   |-------|--------------|---------------|
+   | [255,255,255] (white) | [235, 255, 255] | [255, 255, 255] |
+   | [128,128,128] (gray) | [118, 130, 149] | [129, 129, 129] |
+   | [0,0,0] (black) | [0, 0, 0] | [0, 0, 0] |
+
+   - skcms outputs NON-neutral colors for gray input (correct chromatic adaptation)
+   - moxcms outputs NEUTRAL gray (missing chromatic adaptation)
+
+### Root Cause
+
+**V2 profiles may have colorants in native device white point space (often D65), not pre-adapted to D50 PCS.**
+
+moxcms's `rgb_to_xyz_matrix()` function:
+```rust
+pub fn rgb_to_xyz_matrix(&self) -> Matrix3d {
+    let xyz_matrix = self.colorant_matrix();
+    let white_point = Chromaticity::D50.to_xyzd(); // Always D50!
+    ColorProfile::rgb_to_xyz_d(xyz_matrix, white_point)
+}
+```
+
+This assumes colorants are already in D50 space. For V2 profiles like SM245B with D65-native colorants, this produces incorrect transforms where:
+- The transform matrix preserves neutral gray (all rows sum to 1.0)
+- But the TRC differences are NOT properly reflected in the output
+- The result is near-identity transform instead of proper color conversion
+
+### skcms Behavior
+
+skcms correctly detects the colorant/white-point mismatch and applies chromatic adaptation (Bradford or similar) to convert colorants from their implied white point (D65) to D50 PCS before computing the transform matrix.
+
+### Impact
+
+| Profile Type | moxcms Correct? | Notes |
+|--------------|-----------------|-------|
+| V4 profiles | YES | Colorants are pre-adapted to D50 |
+| V2 with D50 colorants | YES | If colorants already sum to D50 |
+| V2 with D65 colorants | **NO** | Missing chromatic adaptation |
+
+### Recommendation
+
+moxcms needs to:
+1. Detect V2 profiles where colorant sum != white point
+2. Apply chromatic adaptation (Bradford) to convert colorants to D50
+3. Then proceed with current matrix calculation
+
+This is a fundamental bug in V2 profile handling, not a TRC interpolation issue.
+
+### Test Results
+- 153 tests passing (investigation tests)
+- Root cause confirmed
+
+---
+
 ## Template for Future Entries
 
 ```markdown
