@@ -905,6 +905,270 @@ fn test_xyz_identity_float() {
 }
 
 // ============================================================================
+// Gray Profile Transform Tests
+// Port of CheckInputGray, CheckOutputGray from testcms2.c
+// ============================================================================
+
+/// Test gray input profile with gamma 2.2
+/// Port of CheckInputGray from testcms2.c
+#[test]
+fn test_gray_input_to_lab() {
+    // Create a gray profile with gamma 2.2
+    let gamma22 = ToneCurve::new(2.2);
+    let gray = Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
+
+    let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab profile creation failed");
+
+    let transform = lcms2::Transform::<[u8; 1], [f64; 3]>::new(
+        &gray,
+        PixelFormat::GRAY_8,
+        &lab,
+        PixelFormat::Lab_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test known values: gray input -> expected L* value
+    // (0, 0), (125, 52.768), (200, 81.069), (255, 100.0)
+    let test_cases = [
+        (0u8, 0.0f64),
+        (125, 52.768),
+        (200, 81.069),
+        (255, 100.0),
+    ];
+
+    for (gray_in, expected_l) in test_cases {
+        let input = [gray_in];
+        let mut lab_out = [0.0f64; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut lab_out));
+
+        let err_l = (lab_out[0] - expected_l).abs();
+        assert!(
+            err_l < 0.1,
+            "Gray {} -> Lab L* failed: got {:.3}, expected {:.3}, error {:.3}",
+            gray_in,
+            lab_out[0],
+            expected_l,
+            err_l
+        );
+
+        // a* and b* should be near zero for gray
+        assert!(
+            lab_out[1].abs() < 0.1 && lab_out[2].abs() < 0.1,
+            "Gray {} -> Lab a*/b* should be ~0: got a*={:.3}, b*={:.3}",
+            gray_in,
+            lab_out[1],
+            lab_out[2]
+        );
+    }
+}
+
+/// Test gray output profile with gamma 2.2
+/// Port of CheckOutputGray from testcms2.c
+#[test]
+fn test_lab_to_gray_output() {
+    let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab profile creation failed");
+
+    // Create a gray profile with gamma 2.2
+    let gamma22 = ToneCurve::new(2.2);
+    let gray = Profile::new_gray(&d50_white_point(), &gamma22).expect("Gray profile creation failed");
+
+    let transform = lcms2::Transform::<[f64; 3], [u8; 1]>::new(
+        &lab,
+        PixelFormat::Lab_DBL,
+        &gray,
+        PixelFormat::GRAY_8,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test known values: L* input -> expected gray value
+    // (0, 0), (52.768, 125), (81.069, 200), (100.0, 255)
+    let test_cases = [
+        (0.0f64, 0u8),
+        (52.768, 125),
+        (81.069, 200),
+        (100.0, 255),
+    ];
+
+    for (l_in, expected_gray) in test_cases {
+        let input = [l_in, 0.0, 0.0];
+        let mut gray_out = [0u8];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut gray_out));
+
+        let err = (gray_out[0] as i32 - expected_gray as i32).abs();
+        assert!(
+            err <= 1,
+            "Lab L*={:.3} -> Gray failed: got {}, expected {}, error {}",
+            l_in,
+            gray_out[0],
+            expected_gray,
+            err
+        );
+    }
+}
+
+/// Test linear gray profile (gamma 1.0) to Lab
+#[test]
+fn test_linear_gray_to_lab() {
+    // Create a linear gray profile (gamma 1.0)
+    let linear = ToneCurve::new(1.0);
+    let gray = Profile::new_gray(&d50_white_point(), &linear).expect("Gray profile creation failed");
+
+    let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab profile creation failed");
+
+    let transform = lcms2::Transform::<[u8; 1], [f64; 3]>::new(
+        &gray,
+        PixelFormat::GRAY_8,
+        &lab,
+        PixelFormat::Lab_DBL,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // With linear gamma (1.0), the gray value directly represents luminance Y.
+    // The L* formula is: L* = 116 * (Y)^(1/3) - 16 for Y > 0.008856
+    // For Y = 125/255 = 0.49019: L* = 116 * 0.49019^(1/3) - 16 = 75.463
+    // For Y = 200/255 = 0.78431: L* = 116 * 0.78431^(1/3) - 16 = 90.961
+    let test_cases = [
+        (0u8, 0.0f64),
+        (125, 75.463),
+        (200, 90.961),
+        (255, 100.0),
+    ];
+
+    for (gray_in, expected_l) in test_cases {
+        let input = [gray_in];
+        let mut lab_out = [0.0f64; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut lab_out));
+
+        let err_l = (lab_out[0] - expected_l).abs();
+        assert!(
+            err_l < 0.1,
+            "Linear Gray {} -> Lab L* failed: got {:.3}, expected {:.3}, error {:.3}",
+            gray_in,
+            lab_out[0],
+            expected_l,
+            err_l
+        );
+    }
+}
+
+// ============================================================================
+// 8-bit Matrix-Shaper Transform Tests
+// Port of CheckMatrixShaperXFORM8 from testcms2.c
+// ============================================================================
+
+/// Test 8-bit sRGB identity transform
+#[test]
+fn test_srgb_identity_8bit() {
+    let srgb = Profile::new_srgb();
+
+    let transform = lcms2::Transform::<[u8; 3], [u8; 3]>::new(
+        &srgb,
+        PixelFormat::RGB_8,
+        &srgb,
+        PixelFormat::RGB_8,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test all values from 0 to 255
+    let mut max_err = 0i32;
+    for v in 0u8..=255 {
+        let input = [v, v, v];
+        let mut output = [0u8; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
+
+        let err = (output[0] as i32 - v as i32)
+            .abs()
+            .max((output[1] as i32 - v as i32).abs())
+            .max((output[2] as i32 - v as i32).abs());
+
+        if err > max_err {
+            max_err = err;
+        }
+    }
+
+    // 8-bit identity should have at most 2 levels of error
+    assert!(
+        max_err <= 2,
+        "8-bit sRGB identity max error: {} (expected <= 2)",
+        max_err
+    );
+}
+
+/// Test 8-bit custom RGB identity transform
+#[test]
+fn test_custom_rgb_identity_8bit() {
+    // Create "above RGB" - a custom RGB space like in lcms2 testbed
+    let d65 = CIExyY {
+        x: 0.3127,
+        y: 0.3290,
+        Y: 1.0,
+    };
+
+    let above_primaries = CIExyYTRIPLE {
+        Red: CIExyY {
+            x: 0.64,
+            y: 0.33,
+            Y: 1.0,
+        },
+        Green: CIExyY {
+            x: 0.21,
+            y: 0.71,
+            Y: 1.0,
+        },
+        Blue: CIExyY {
+            x: 0.15,
+            y: 0.06,
+            Y: 1.0,
+        },
+    };
+
+    let gamma = ToneCurve::new(2.19921875);
+    let curves = [&gamma, &gamma, &gamma];
+
+    let above = Profile::new_rgb(&d65, &above_primaries, &curves).expect("Above RGB creation failed");
+
+    let transform = lcms2::Transform::<[u8; 3], [u8; 3]>::new(
+        &above,
+        PixelFormat::RGB_8,
+        &above,
+        PixelFormat::RGB_8,
+        Intent::RelativeColorimetric,
+    )
+    .expect("Transform creation failed");
+
+    // Test several values
+    let mut max_err = 0i32;
+    for v in (0u8..=255).step_by(16) {
+        let input = [v, v, v];
+        let mut output = [0u8; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
+
+        let err = (output[0] as i32 - v as i32)
+            .abs()
+            .max((output[1] as i32 - v as i32).abs())
+            .max((output[2] as i32 - v as i32).abs());
+
+        if err > max_err {
+            max_err = err;
+        }
+    }
+
+    // 8-bit identity should have at most 2 levels of error
+    assert!(
+        max_err <= 2,
+        "8-bit Above RGB identity max error: {} (expected <= 2)",
+        max_err
+    );
+}
+
+// ============================================================================
 // Summary Test
 // ============================================================================
 
@@ -919,6 +1183,8 @@ fn test_advanced_summary() {
     println!("  - Lab V2/V4 profiles and cross-version transforms");
     println!("  - Lab encoded transforms (V2/V4)");
     println!("  - XYZ identity transforms");
-    println!("  - Custom RGB profiles (Rec709)");
+    println!("  - Gray profile input/output transforms");
+    println!("  - 8-bit matrix-shaper transforms");
+    println!("  - Custom RGB profiles (Rec709, Above)");
     println!("  - Device link profiles");
 }
