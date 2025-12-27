@@ -95,6 +95,10 @@ path = "tests/lcms2_testbed.rs"
 name = "lcms2_profiles_transforms"
 path = "tests/lcms2_profiles_transforms.rs"
 
+[[test]]
+name = "lcms2_advanced"
+path = "tests/lcms2_advanced.rs"
+
 [[bench]]
 name = "cms_transform"
 harness = false
