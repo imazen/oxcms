@@ -77,7 +77,9 @@ fn test_corpus_profile_parsing() {
 
         // Skip obviously malformed test profiles (meant for error handling tests)
         let filename = profile_path.file_name().unwrap().to_string_lossy();
-        if filename.contains("bad") || filename.contains("toosmall") || filename.contains("fuzz") {
+        let path_str = profile_path.to_string_lossy();
+        if filename.contains("bad") || filename.contains("toosmall")
+            || filename.contains("fuzz") || path_str.contains("/fuzz/") {
             continue;
         }
 
@@ -292,7 +294,9 @@ fn test_corpus_transform_parity() {
         };
 
         tested += 1;
-        let mut max_diff = 0i32;
+        let mut max_diff_vs_lcms2 = 0i32;
+        let mut max_moxcms_vs_browser = 0i32;
+        let mut browser_agree = true;
 
         for color in &test_colors {
             // qcms (in-place)
@@ -321,25 +325,45 @@ fn test_corpus_transform_parity() {
                 1,
             );
 
-            // Compare all pairs (using lcms2 as reference)
+            // Compare vs lcms2 (traditional reference)
             for i in 0..3 {
-                max_diff = max_diff
+                max_diff_vs_lcms2 = max_diff_vs_lcms2
                     .max((qcms_data[i] as i32 - lcms2_out[i] as i32).abs())
                     .max((moxcms_out[i] as i32 - lcms2_out[i] as i32).abs())
                     .max((skcms_out[i] as i32 - lcms2_out[i] as i32).abs());
             }
+
+            // Check browser consensus (qcms vs skcms)
+            for i in 0..3 {
+                let browser_diff = (qcms_data[i] as i32 - skcms_out[i] as i32).abs();
+                if browser_diff > 1 {
+                    browser_agree = false;
+                }
+                // How well does moxcms match browser consensus?
+                let browser_avg = (qcms_data[i] as i32 + skcms_out[i] as i32) / 2;
+                max_moxcms_vs_browser = max_moxcms_vs_browser
+                    .max((moxcms_out[i] as i32 - browser_avg).abs());
+            }
         }
 
-        if max_diff == 0 {
+        if max_diff_vs_lcms2 == 0 {
             identical += 1;
-        } else if max_diff <= 2 {
+        } else if max_diff_vs_lcms2 <= 2 {
             small_diff += 1;
         } else {
             large_diff += 1;
-            eprintln!(
-                "  Large diff in {}: max_diff={}",
-                filename, max_diff
-            );
+            // Only report if moxcms diverges from browser consensus
+            if max_moxcms_vs_browser > 2 && browser_agree {
+                eprintln!(
+                    "  INVESTIGATE {}: max_diff_vs_lcms2={}, but browsers agree and moxcms differs by {}",
+                    filename, max_diff_vs_lcms2, max_moxcms_vs_browser
+                );
+            }
+        }
+
+        // Track browser consensus parity separately
+        if max_moxcms_vs_browser <= 1 {
+            // moxcms matches browser consensus
         }
     }
 

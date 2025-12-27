@@ -69,3 +69,15 @@ path = "tests/correctness_evaluation.rs"
 [[test]]
 name = "profile_analysis"
 path = "tests/profile_analysis.rs"
+
+[[test]]
+name = "browser_cms_parity"
+path = "tests/browser_cms_parity.rs"
+
+[[test]]
+name = "v4_profile_diagnostics"
+path = "tests/v4_profile_diagnostics.rs"
+
+[[bench]]
+name = "cms_transform"
+harness = false

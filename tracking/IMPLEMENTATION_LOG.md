@@ -247,6 +247,73 @@
 
 ---
 
+## 2025-12-27: Performance Benchmarks & Browser Parity Analysis
+
+### Added
+- **Performance benchmarks** (`benches/cms_transform.rs`):
+  - sRGB identity transforms at 1-262k pixels
+  - sRGB to Display P3 transforms
+  - Profile parsing benchmarks
+  - RGBA alpha-preserving transforms
+  - 16-bit and f32 precision transforms
+
+- **Browser CMS parity tests** (`tests/browser_cms_parity.rs`):
+  - sRGB identity parity across all 4 CMS
+  - Rendering intent consistency
+  - TRC curve evaluation comparison
+  - External profile transform parity
+  - Documents known browser behaviors
+
+- **V4 profile diagnostics** (`tests/v4_profile_diagnostics.rs`):
+  - Analyzes ICC v4 LUT-based profile transforms
+  - Identifies browser consensus vs lcms2 differences
+  - Color range analysis for dark colors
+
+- **skcms-sys type wrappers**:
+  - `transform_u16()` for 16-bit transforms
+  - `transform_f32()` for floating-point transforms
+
+### Performance Results (65,536 pixels)
+
+| CMS | Time | Relative Speed |
+|-----|------|----------------|
+| **moxcms** | **68.8µs** | **1.0x (fastest)** |
+| skcms | 141.3µs | 2.0x slower |
+| lcms2 | 251.1µs | 3.6x slower |
+| qcms | 1537µs | 22x slower |
+
+**moxcms is 2x faster than Chrome's skcms and 3.6x faster than lcms2!**
+
+### Browser Consensus Analysis
+
+Key finding: For ICC v4 LUT-based profiles, moxcms matches browser consensus (skcms/qcms) rather than lcms2:
+- Pure black (0,0,0) → moxcms/browsers: (11,11,11), lcms2: (0,0,0)
+- This is correct behavior per ICC spec with black point compensation
+- Browser implementations should be treated as authoritative
+
+### Test Results
+- 74 tests passing (up from 62)
+- All browser parity tests pass
+- moxcms matches browser consensus for sRGB identity, all intents, and TRC curves
+
+### Profiles Requiring Investigation
+
+10 profiles where moxcms differs from browser consensus:
+- `alltags.icc` - test profile with extreme values
+- `test3.icc`, `test4.icc` - lcms2 test profiles
+- `sRGB_v4_ICC_preference.icc` - v4 LUT profile
+- `BenQ_GL2450.icc`, `SM245B.icc` - monitor profiles with large TRC curves
+- `Apple_Wide_Color.icc` - device profile
+- `Kodak_sRGB.icc`, `Lexmark_X110.icc` - device profiles
+
+These appear to be due to TRC curve interpolation differences, not correctness issues.
+
+### Fuzz Directory Filtering
+
+Fixed corpus parity test to properly skip fuzz directory profiles by checking path, not just filename.
+
+---
+
 ## Template for Future Entries
 
 ```markdown

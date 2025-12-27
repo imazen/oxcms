@@ -262,13 +262,67 @@ pub fn srgb_profile() -> &'static skcms_ICCProfile {
     unsafe { &*skcms_sRGB_profile() }
 }
 
-/// Transform pixels between color profiles
+/// Transform pixels between color profiles (u8 version)
 pub fn transform(
     src: &[u8],
     src_fmt: skcms_PixelFormat,
     src_alpha: skcms_AlphaFormat,
     src_profile: &skcms_ICCProfile,
     dst: &mut [u8],
+    dst_fmt: skcms_PixelFormat,
+    dst_alpha: skcms_AlphaFormat,
+    dst_profile: &skcms_ICCProfile,
+    npixels: usize,
+) -> bool {
+    unsafe {
+        skcms_Transform(
+            src.as_ptr() as *const c_void,
+            src_fmt,
+            src_alpha,
+            src_profile,
+            dst.as_mut_ptr() as *mut c_void,
+            dst_fmt,
+            dst_alpha,
+            dst_profile,
+            npixels,
+        )
+    }
+}
+
+/// Transform pixels between color profiles (u16 version)
+pub fn transform_u16(
+    src: &[u16],
+    src_fmt: skcms_PixelFormat,
+    src_alpha: skcms_AlphaFormat,
+    src_profile: &skcms_ICCProfile,
+    dst: &mut [u16],
+    dst_fmt: skcms_PixelFormat,
+    dst_alpha: skcms_AlphaFormat,
+    dst_profile: &skcms_ICCProfile,
+    npixels: usize,
+) -> bool {
+    unsafe {
+        skcms_Transform(
+            src.as_ptr() as *const c_void,
+            src_fmt,
+            src_alpha,
+            src_profile,
+            dst.as_mut_ptr() as *mut c_void,
+            dst_fmt,
+            dst_alpha,
+            dst_profile,
+            npixels,
+        )
+    }
+}
+
+/// Transform pixels between color profiles (f32 version)
+pub fn transform_f32(
+    src: &[f32],
+    src_fmt: skcms_PixelFormat,
+    src_alpha: skcms_AlphaFormat,
+    src_profile: &skcms_ICCProfile,
+    dst: &mut [f32],
     dst_fmt: skcms_PixelFormat,
     dst_alpha: skcms_AlphaFormat,
     dst_profile: &skcms_ICCProfile,
