@@ -10,7 +10,7 @@
 //! - lcms2_test_cmyk.icc (lcms2 testbed profile)
 
 use lcms2::{Intent, PixelFormat, Profile};
-use std::path::Path;
+use std::path::PathBuf;
 use std::slice;
 
 // ============================================================================
@@ -38,20 +38,45 @@ const COLOR_SAMPLE_STEP: usize = 32;
 /// Coarser step for K channel to reduce test time while maintaining coverage.
 const K_CHANNEL_SAMPLE_STEP: usize = 64;
 
+/// Primary CMYK profile used for most tests
+const PRIMARY_CMYK_PROFILE: &str = "USWebCoatedSWOP.icc";
+
 // ============================================================================
 // Test Helpers
 // ============================================================================
 
-/// Path to ICC profiles directory
-fn icc_dir() -> &'static Path {
-    Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/icc"))
+/// Path to ICC profiles directory (fixtures are versioned in the repo)
+fn icc_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/icc")
 }
 
-/// Load an ICC profile from the fixtures directory
+/// Load an ICC profile from fixtures. Panics if missing - fixtures are required.
 fn load_profile(name: &str) -> Profile {
     let path = icc_dir().join(name);
     Profile::new_file(&path).unwrap_or_else(|e| {
-        panic!("Failed to load profile {}: {:?}", path.display(), e)
+        panic!(
+            "Required ICC fixture '{}' failed to load: {:?}\n\
+             Expected at: {}\n\
+             Fixtures should be versioned in the repository.",
+            name,
+            e,
+            path.display()
+        )
+    })
+}
+
+/// Load ICC profile data as bytes. Panics if missing.
+fn load_profile_data(name: &str) -> Vec<u8> {
+    let path = icc_dir().join(name);
+    std::fs::read(&path).unwrap_or_else(|e| {
+        panic!(
+            "Required ICC fixture '{}' not found: {}\n\
+             Expected at: {}\n\
+             Fixtures should be versioned in the repository.",
+            name,
+            e,
+            path.display()
+        )
     })
 }
 
@@ -70,33 +95,21 @@ fn test_load_cmyk_profiles() {
     ];
 
     for name in profiles {
-        let path = icc_dir().join(name);
-        if path.exists() {
-            let profile = Profile::new_file(&path);
-            assert!(
-                profile.is_ok(),
-                "Failed to load {}: {:?}",
-                name,
-                profile.err()
-            );
+        let profile = load_profile(name);
 
-            let p = profile.unwrap();
-            assert_eq!(
-                p.color_space(),
-                lcms2::ColorSpaceSignature::CmykData,
-                "{} should be CMYK color space",
-                name
-            );
+        assert_eq!(
+            profile.color_space(),
+            lcms2::ColorSpaceSignature::CmykData,
+            "{} should be CMYK color space",
+            name
+        );
 
-            println!(
-                "Loaded {}: version={:.1}, PCS={:?}",
-                name,
-                p.version(),
-                p.pcs()
-            );
-        } else {
-            println!("Skipping {}: not found", name);
-        }
+        println!(
+            "Loaded {}: version={:.1}, PCS={:?}",
+            name,
+            profile.version(),
+            profile.pcs()
+        );
     }
 }
 
@@ -107,13 +120,7 @@ fn test_load_cmyk_profiles() {
 /// Test CMYK to sRGB transform with USWebCoatedSWOP
 #[test]
 fn test_cmyk_to_srgb_swop() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let srgb = Profile::new_srgb();
 
     let transform = lcms2::Transform::<[u8; 4], [u8; 3]>::new(
@@ -171,13 +178,7 @@ fn test_cmyk_to_srgb_swop() {
 /// Test sRGB to CMYK transform
 #[test]
 fn test_srgb_to_cmyk_swop() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let srgb = Profile::new_srgb();
 
     let transform = lcms2::Transform::<[u8; 3], [u8; 4]>::new(
@@ -238,13 +239,7 @@ fn test_srgb_to_cmyk_swop() {
 /// Test CMYK -> sRGB -> CMYK roundtrip stability
 #[test]
 fn test_cmyk_srgb_roundtrip() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let srgb = Profile::new_srgb();
 
     let to_rgb = lcms2::Transform::<[u8; 4], [u8; 3]>::new(
@@ -336,12 +331,6 @@ fn test_cmyk_profile_comparison() {
 
     println!("Comparing CMYK profiles for CMYK(128,128,128,128) -> RGB:");
     for (filename, label) in profiles {
-        let path = icc_dir().join(filename);
-        if !path.exists() {
-            println!("  {}: not found, skipping", label);
-            continue;
-        }
-
         let cmyk = load_profile(filename);
         let transform = lcms2::Transform::<[u8; 4], [u8; 3]>::new(
             &cmyk,
@@ -365,13 +354,7 @@ fn test_cmyk_profile_comparison() {
 /// Test CMYK float transforms
 #[test]
 fn test_cmyk_float_transform() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let srgb = Profile::new_srgb();
 
     let transform = lcms2::Transform::<[f32; 4], [f32; 3]>::new(
@@ -429,13 +412,7 @@ fn test_cmyk_float_transform() {
 /// Test CMYK to Lab transform
 #[test]
 fn test_cmyk_to_lab() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let lab = Profile::new_lab4_context(
         lcms2::GlobalContext::new(),
         &lcms2::CIExyY {
@@ -507,13 +484,7 @@ fn test_cmyk_to_lab() {
 /// Compare rendering intents for CMYK
 #[test]
 fn test_cmyk_rendering_intents() {
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let cmyk = load_profile("USWebCoatedSWOP.icc");
+    let cmyk = load_profile(PRIMARY_CMYK_PROFILE);
     let srgb = Profile::new_srgb();
 
     let intents = [
@@ -552,13 +523,7 @@ fn test_cmyk_rendering_intents() {
 fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
     use cms_tests::reference::{transform_lcms2_cmyk_to_rgb, transform_moxcms_cmyk_to_rgb};
 
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let profile_data = std::fs::read(&path).expect("Failed to read profile");
+    let profile_data = load_profile_data(PRIMARY_CMYK_PROFILE);
 
     // Generate test CMYK values
     let mut cmyk_pixels = Vec::new();
@@ -625,13 +590,7 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
 fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
     use cms_tests::reference::{transform_lcms2_rgb_to_cmyk, transform_moxcms_rgb_to_cmyk};
 
-    let path = icc_dir().join("USWebCoatedSWOP.icc");
-    if !path.exists() {
-        println!("Skipping: USWebCoatedSWOP.icc not found");
-        return;
-    }
-
-    let profile_data = std::fs::read(&path).expect("Failed to read profile");
+    let profile_data = load_profile_data(PRIMARY_CMYK_PROFILE);
 
     // Generate test RGB values
     let mut rgb_pixels = Vec::new();
@@ -715,29 +674,13 @@ fn test_cmyk_parity_all_profiles() {
 
     println!("\nCMYK->RGB parity across profiles:");
     for name in profiles {
-        let path = icc_dir().join(name);
-        if !path.exists() {
-            println!("  {}: not found, skipping", name);
-            continue;
-        }
+        let profile_data = load_profile_data(name);
 
-        let profile_data = std::fs::read(&path).expect("Failed to read profile");
+        let lcms2_result = transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_input)
+            .unwrap_or_else(|e| panic!("{}: lcms2 failed: {}", name, e));
 
-        let lcms2_result = match transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_input) {
-            Ok(r) => r,
-            Err(e) => {
-                println!("  {}: lcms2 failed: {}", name, e);
-                continue;
-            }
-        };
-
-        let moxcms_result = match transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_input) {
-            Ok(r) => r,
-            Err(e) => {
-                println!("  {}: moxcms failed: {}", name, e);
-                continue;
-            }
-        };
+        let moxcms_result = transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_input)
+            .unwrap_or_else(|e| panic!("{}: moxcms failed: {}", name, e));
 
         let mut max_diff = 0u16;
         for i in 0..lcms2_result.len() {
