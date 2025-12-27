@@ -19,6 +19,7 @@ skcms-sys.workspace = true
 
 # Color science for accuracy measurement
 palette.workspace = true
+colorutils-rs.workspace = true
 
 # Serialization for test data
 serde.workspace = true
@@ -77,6 +78,14 @@ path = "tests/browser_cms_parity.rs"
 [[test]]
 name = "v4_profile_diagnostics"
 path = "tests/v4_profile_diagnostics.rs"
+
+[[test]]
+name = "xyb_color_space"
+path = "tests/xyb_color_space.rs"
+
+[[test]]
+name = "named_color_profiles"
+path = "tests/named_color_profiles.rs"
 
 [[bench]]
 name = "cms_transform"

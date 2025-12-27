@@ -21,6 +21,7 @@ skcms-sys = { path = "crates/skcms-sys" }
 
 # Color science
 palette = "0.7"
+colorutils-rs = "0.7"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

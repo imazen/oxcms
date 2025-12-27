@@ -25,8 +25,10 @@ Last updated: 2025-12-27
 | Rendering intents | 7 | 7 | 0 | 0 | Intent comparison |
 | TRC analysis | 4+ | 4+ | 0 | 0 | Curve analysis |
 | V4 diagnostics | 3 | 3 | 0 | 0 | LUT profiles |
+| XYB color space | 8 | 8 | 0 | 0 | JPEG XL color space |
+| Named color profiles | 4 | 4 | 0 | 0 | nmcl/ncl2 profiles |
 | Doc tests | 1 | 1 | 0 | 0 | Examples |
-| **Total** | **173** | **173** | **0** | **0** | **100%** |
+| **Total** | **185** | **185** | **0** | **0** | **100%** |
 
 ## Test Categories
 
@@ -134,6 +136,37 @@ Last updated: 2025-12-27
 - **No grayscale transform support** - panics on Gray8 data type
 - In-place transform API only (no separate input/output buffers)
 - Limited profile introspection (is_srgb field is private)
+
+### XYB Color Space
+
+XYB is the perceptual color space used by JPEG XL. It is NOT a standard ICC profile color space.
+
+| Test | Status | Notes |
+|------|--------|-------|
+| XYB round-trip (primaries) | ✅ | Perfect round-trip, max error 0 |
+| XYB channel meaning | ✅ | X=L-M opponent, Y=luminance, B=blue |
+| XYB range analysis | ✅ | Matches ColorAide spec |
+| XYB linearity | ✅ | Monotonic Y channel |
+| XYB comprehensive (140K colors) | ✅ | 0% errors > 1 |
+| colorutils-rs comparison | ⚠️ | colorutils-rs v0.7.5 has critical bug |
+
+**colorutils-rs Bug**: The XYB implementation in colorutils-rs v0.7.5 is completely broken:
+- Colors with r=0 all produce identical wrong XYB values
+- Round-trip fails for most colors
+- Our implementation is verified via perfect round-trip tests
+
+### Named Color Profiles
+
+Named color profiles (nmcl class) contain spot colors like Pantone.
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Profile structure docs | ✅ | ncl2 tag format documented |
+| XML definitions | ✅ | 3 iccMAX XML files found |
+| Corpus scan | ✅ | 0 nmcl profiles in 112 tested |
+| Class distribution | ✅ | 73 mntr, 9 scnr, 7 prtr, 4 spac |
+
+**Note**: Named color profiles are rare because spot color libraries (Pantone, HKS, etc.) are proprietary.
 
 ## Update Process
 
