@@ -1169,6 +1169,238 @@ fn test_custom_rgb_identity_8bit() {
 }
 
 // ============================================================================
+// sRGB Gamma Curve Tests
+// Port of CheckJointFloatCurves_sRGB from testcms2.c
+// ============================================================================
+
+/// Build sRGB gamma curve using parametric type 4
+fn build_srgb_gamma() -> ToneCurve {
+    // sRGB EOTF parameters (type 4):
+    // Y = (aX + b)^Gamma | X >= d
+    // Y = cX             | X < d
+    let params = [
+        2.4,            // gamma
+        1.0 / 1.055,    // a
+        0.055 / 1.055,  // b
+        1.0 / 12.92,    // c
+        0.04045,        // d
+    ];
+    ToneCurve::new_parametric(4, &params).expect("sRGB gamma creation failed")
+}
+
+/// Test that sRGB gamma forward/reverse evaluation gives identity
+#[test]
+fn test_srgb_gamma_roundtrip() {
+    let forward = build_srgb_gamma();
+    let reverse = forward.reversed();
+
+    // Forward then reverse should give identity
+    let mut max_err = 0.0f32;
+    for i in 0..=20 {
+        let x = i as f32 / 20.0;
+        let y = forward.eval(x);
+        let z = reverse.eval(y);
+        let err = (z - x).abs();
+        if err > max_err {
+            max_err = err;
+        }
+    }
+
+    assert!(
+        max_err < 0.01,
+        "sRGB gamma forward/reverse should be identity, max error: {}",
+        max_err
+    );
+}
+
+/// Test sRGB gamma curve evaluation at known points
+#[test]
+fn test_srgb_gamma_values() {
+    let gamma = build_srgb_gamma();
+
+    // Test at several known points
+    // sRGB EOTF: for x < 0.04045, y = x/12.92; otherwise y = ((x + 0.055)/1.055)^2.4
+    let test_points = [
+        (0.0f32, 0.0f32),
+        (0.04045, 0.04045 / 12.92),  // At threshold
+        (0.5, ((0.5 + 0.055) / 1.055f32).powf(2.4)),
+        (1.0, 1.0),
+    ];
+
+    for (input, expected) in test_points {
+        let result = gamma.eval(input);
+        let err = (result - expected).abs();
+        assert!(
+            err < 0.001,
+            "sRGB gamma at {}: got {:.6}, expected {:.6}, error {:.6}",
+            input,
+            result,
+            expected,
+            err
+        );
+    }
+}
+
+/// Test sigmoidal curve (type 108) join is identity
+/// Port of CheckJointCurvesSShaped from testcms2.c
+#[test]
+fn test_sigmoidal_curve_join() {
+    let p = 3.2;
+    let forward = ToneCurve::new_parametric(108, &[p]).expect("Sigmoidal curve creation failed");
+
+    // Join curve with itself should give identity (since it's symmetric)
+    // Actually, join(forward, forward) = forward^-1(forward(t)) = t for symmetric curves
+    let joined = forward.join(&forward, 4096);
+
+    assert!(
+        joined.is_linear(),
+        "Sigmoidal curve join with itself should be linear"
+    );
+}
+
+/// Test degenerated curve reverse
+/// Port of CheckReverseDegenerated from testcms2.c
+#[test]
+fn test_degenerated_curve_reverse() {
+    // Create a curve with flat regions (degenerated)
+    let tab: [u16; 16] = [
+        0, 0, 0, 0, 0, 0x5555, 0x6666, 0x7777, 0x8888, 0x9999, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+        0xFFFF, 0xFFFF,
+    ];
+
+    let curve = ToneCurve::new_tabulated(&tab);
+    let reversed = curve.reversed();
+
+    // The reversed curve should exist and be valid
+    assert!(reversed.is_monotonic(), "Reversed degenerated curve should be monotonic");
+
+    // Test some points
+    // For a degenerated curve, the reverse maps the flat output regions to single input values
+    let y_mid = reversed.eval(0.5f32);
+    assert!(
+        y_mid >= 0.0 && y_mid <= 1.0,
+        "Reversed curve at 0.5 should be in [0,1], got {}",
+        y_mid
+    );
+}
+
+// ============================================================================
+// Multi-Profile Transform Tests
+// ============================================================================
+
+/// Test multiprofile transform: sRGB -> XYZ -> sRGB
+#[test]
+fn test_multiprofile_transform() {
+    let srgb = Profile::new_srgb();
+    let xyz = Profile::new_xyz();
+
+    // Create transform: sRGB -> XYZ -> sRGB (should be identity)
+    let profiles: [&Profile; 3] = [&srgb, &xyz, &srgb];
+
+    let transform = lcms2::Transform::<[f32; 3], [f32; 3]>::new_multiprofile(
+        &profiles,
+        PixelFormat::RGB_FLT,
+        PixelFormat::RGB_FLT,
+        Intent::RelativeColorimetric,
+        Flags::default(),
+    )
+    .expect("Multiprofile transform creation failed");
+
+    // Test that it's approximately identity
+    for i in 0..=10 {
+        let v = i as f32 / 10.0;
+        let input = [v, v, v];
+        let mut output = [0.0f32; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
+
+        let max_err = (output[0] - v)
+            .abs()
+            .max((output[1] - v).abs())
+            .max((output[2] - v).abs());
+
+        assert!(
+            max_err < 0.001,
+            "Multiprofile sRGB->XYZ->sRGB at {}: got {:?}, error {}",
+            v,
+            output,
+            max_err
+        );
+    }
+}
+
+/// Test multiprofile transform: sRGB -> Lab -> sRGB
+#[test]
+fn test_multiprofile_through_lab() {
+    let srgb = Profile::new_srgb();
+    let lab = Profile::new_lab4_context(lcms2::GlobalContext::new(), &d50_white_point())
+        .expect("Lab profile creation failed");
+
+    // Create transform: sRGB -> Lab -> sRGB
+    let profiles: [&Profile; 3] = [&srgb, &lab, &srgb];
+
+    let transform = lcms2::Transform::<[f32; 3], [f32; 3]>::new_multiprofile(
+        &profiles,
+        PixelFormat::RGB_FLT,
+        PixelFormat::RGB_FLT,
+        Intent::RelativeColorimetric,
+        Flags::default(),
+    )
+    .expect("Multiprofile transform creation failed");
+
+    // Test that it's approximately identity for gray values
+    for i in 0..=10 {
+        let v = i as f32 / 10.0;
+        let input = [v, v, v];
+        let mut output = [0.0f32; 3];
+        transform.transform_pixels(slice::from_ref(&input), slice::from_mut(&mut output));
+
+        let max_err = (output[0] - v)
+            .abs()
+            .max((output[1] - v).abs())
+            .max((output[2] - v).abs());
+
+        assert!(
+            max_err < 0.01,
+            "Multiprofile sRGB->Lab->sRGB at {}: got {:?}, error {}",
+            v,
+            output,
+            max_err
+        );
+    }
+}
+
+// ============================================================================
+// Null Profile Tests
+// ============================================================================
+
+/// Test null profile creation
+#[test]
+fn test_null_profile() {
+    let null = Profile::new_null();
+
+    // Null profile should have Gray color space
+    assert_eq!(
+        null.color_space(),
+        lcms2::ColorSpaceSignature::GrayData,
+        "Null profile should be Gray"
+    );
+}
+
+// ============================================================================
+// Profile Placeholder Tests
+// ============================================================================
+
+/// Test placeholder profile creation
+#[test]
+fn test_placeholder_profile() {
+    let placeholder = Profile::new_placeholder();
+
+    // Placeholder should be valid but minimal
+    // It's used for creating custom profiles from scratch
+    assert!(placeholder.icc().is_ok(), "Placeholder should be serializable");
+}
+
+// ============================================================================
 // Summary Test
 // ============================================================================
 
@@ -1185,6 +1417,10 @@ fn test_advanced_summary() {
     println!("  - XYZ identity transforms");
     println!("  - Gray profile input/output transforms");
     println!("  - 8-bit matrix-shaper transforms");
+    println!("  - sRGB gamma curve tests");
+    println!("  - Sigmoidal and degenerated curve tests");
+    println!("  - Multiprofile transforms");
+    println!("  - Null and placeholder profiles");
     println!("  - Custom RGB profiles (Rec709, Above)");
     println!("  - Device link profiles");
 }
