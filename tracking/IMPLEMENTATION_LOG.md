@@ -312,6 +312,33 @@ These appear to be due to TRC curve interpolation differences, not correctness i
 
 Fixed corpus parity test to properly skip fuzz directory profiles by checking path, not just filename.
 
+### oxcms-core Profile Expansion
+
+Added built-in profiles:
+- DCI-P3, ProPhoto RGB (wide gamut)
+- Display P3 PQ, BT.2020 PQ, BT.2020 HLG (HDR)
+- Lab D50 (CIELAB)
+- ACES 2065-1, ACEScg (film/VFX)
+- CICP profile creation (video codec support)
+
+### Test Suite Summary
+
+**Total: 135 tests passing across all crates**
+
+| Crate | Tests |
+|-------|-------|
+| moxcms | 51 |
+| oxcms-core | 12 |
+| skcms-sys | 2 |
+| cms-tests | 69 |
+| doctests | 1 |
+
+### Code Quality
+
+- Zero compiler warnings (excluding benign workspace profile warning)
+- Release mode builds and tests pass
+- All browser CMS parity checks pass
+
 ---
 
 ## Template for Future Entries
