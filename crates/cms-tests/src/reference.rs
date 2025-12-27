@@ -110,6 +110,128 @@ pub fn transform_lcms2_srgb(src_pixels: &[u8]) -> Result<Vec<u8>, String> {
     Ok(dst_pixels)
 }
 
+/// Transform CMYK to RGB using moxcms
+pub fn transform_moxcms_cmyk_to_rgb(
+    cmyk_profile_data: &[u8],
+    src_pixels: &[u8], // CMYK pixels (4 bytes per pixel)
+) -> Result<Vec<u8>, String> {
+    use moxcms::{ColorProfile, Layout, TransformOptions};
+
+    let cmyk_profile = ColorProfile::new_from_slice(cmyk_profile_data)
+        .map_err(|e| format!("moxcms CMYK profile: {:?}", e))?;
+
+    let srgb = ColorProfile::new_srgb();
+
+    // moxcms uses Layout::Rgba for CMYK data (4 bytes per pixel, same as CMYK)
+    let transform = cmyk_profile
+        .create_transform_8bit(
+            Layout::Rgba, // CMYK uses Rgba layout in moxcms
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
+        .map_err(|e| format!("moxcms CMYK->RGB transform: {:?}", e))?;
+
+    // Output is RGB (3 bytes per pixel)
+    let num_pixels = src_pixels.len() / 4;
+    let mut dst_pixels = vec![0u8; num_pixels * 3];
+    transform
+        .transform(src_pixels, &mut dst_pixels)
+        .map_err(|e| format!("moxcms CMYK->RGB execute: {:?}", e))?;
+
+    Ok(dst_pixels)
+}
+
+/// Transform CMYK to RGB using lcms2
+pub fn transform_lcms2_cmyk_to_rgb(
+    cmyk_profile_data: &[u8],
+    src_pixels: &[u8], // CMYK pixels (4 bytes per pixel)
+) -> Result<Vec<u8>, String> {
+    use lcms2::{Intent, PixelFormat, Profile, Transform};
+
+    let cmyk_profile = Profile::new_icc(cmyk_profile_data)
+        .map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
+
+    let srgb = Profile::new_srgb();
+
+    let transform = Transform::new(
+        &cmyk_profile,
+        PixelFormat::CMYK_8,
+        &srgb,
+        PixelFormat::RGB_8,
+        Intent::Perceptual,
+    )
+    .map_err(|e| format!("lcms2 CMYK->RGB transform: {}", e))?;
+
+    // Output is RGB (3 bytes per pixel)
+    let num_pixels = src_pixels.len() / 4;
+    let mut dst_pixels = vec![0u8; num_pixels * 3];
+    transform.transform_pixels(src_pixels, &mut dst_pixels);
+
+    Ok(dst_pixels)
+}
+
+/// Transform RGB to CMYK using moxcms
+pub fn transform_moxcms_rgb_to_cmyk(
+    cmyk_profile_data: &[u8],
+    src_pixels: &[u8], // RGB pixels (3 bytes per pixel)
+) -> Result<Vec<u8>, String> {
+    use moxcms::{ColorProfile, Layout, TransformOptions};
+
+    let srgb = ColorProfile::new_srgb();
+
+    let cmyk_profile = ColorProfile::new_from_slice(cmyk_profile_data)
+        .map_err(|e| format!("moxcms CMYK profile: {:?}", e))?;
+
+    // moxcms uses Layout::Rgba for CMYK data (4 bytes per pixel, same as CMYK)
+    let transform = srgb
+        .create_transform_8bit(
+            Layout::Rgb,
+            &cmyk_profile,
+            Layout::Rgba, // CMYK uses Rgba layout in moxcms
+            TransformOptions::default(),
+        )
+        .map_err(|e| format!("moxcms RGB->CMYK transform: {:?}", e))?;
+
+    // Output is CMYK (4 bytes per pixel)
+    let num_pixels = src_pixels.len() / 3;
+    let mut dst_pixels = vec![0u8; num_pixels * 4];
+    transform
+        .transform(src_pixels, &mut dst_pixels)
+        .map_err(|e| format!("moxcms RGB->CMYK execute: {:?}", e))?;
+
+    Ok(dst_pixels)
+}
+
+/// Transform RGB to CMYK using lcms2
+pub fn transform_lcms2_rgb_to_cmyk(
+    cmyk_profile_data: &[u8],
+    src_pixels: &[u8], // RGB pixels (3 bytes per pixel)
+) -> Result<Vec<u8>, String> {
+    use lcms2::{Intent, PixelFormat, Profile, Transform};
+
+    let srgb = Profile::new_srgb();
+
+    let cmyk_profile = Profile::new_icc(cmyk_profile_data)
+        .map_err(|e| format!("lcms2 CMYK profile: {}", e))?;
+
+    let transform = Transform::new(
+        &srgb,
+        PixelFormat::RGB_8,
+        &cmyk_profile,
+        PixelFormat::CMYK_8,
+        Intent::Perceptual,
+    )
+    .map_err(|e| format!("lcms2 RGB->CMYK transform: {}", e))?;
+
+    // Output is CMYK (4 bytes per pixel)
+    let num_pixels = src_pixels.len() / 3;
+    let mut dst_pixels = vec![0u8; num_pixels * 4];
+    transform.transform_pixels(src_pixels, &mut dst_pixels);
+
+    Ok(dst_pixels)
+}
+
 /// Compare outputs from two reference implementations
 pub fn compare_references(
     ref_a: ReferenceCms,

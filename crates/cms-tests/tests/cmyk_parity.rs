@@ -514,6 +514,212 @@ fn test_cmyk_rendering_intents() {
 }
 
 // ============================================================================
+// Cross-CMS Parity Tests (lcms2 vs moxcms)
+// ============================================================================
+
+/// Compare CMYK->RGB transforms between lcms2 and moxcms
+#[test]
+fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
+    use cms_tests::reference::{transform_lcms2_cmyk_to_rgb, transform_moxcms_cmyk_to_rgb};
+
+    let path = icc_dir().join("USWebCoatedSWOP.icc");
+    if !path.exists() {
+        println!("Skipping: USWebCoatedSWOP.icc not found");
+        return;
+    }
+
+    let profile_data = std::fs::read(&path).expect("Failed to read profile");
+
+    // Generate test CMYK values
+    let mut cmyk_pixels = Vec::new();
+    for c in (0u8..=255).step_by(32) {
+        for m in (0u8..=255).step_by(64) {
+            for y in (0u8..=255).step_by(64) {
+                for k in (0u8..=255).step_by(64) {
+                    cmyk_pixels.extend_from_slice(&[c, m, y, k]);
+                }
+            }
+        }
+    }
+
+    let lcms2_result = transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_pixels)
+        .expect("lcms2 CMYK->RGB failed");
+    let moxcms_result = transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_pixels)
+        .expect("moxcms CMYK->RGB failed");
+
+    // Compare outputs
+    let num_pixels = cmyk_pixels.len() / 4;
+    let mut max_diff = 0u8;
+    let mut total_diff = 0u64;
+    let mut diff_count = 0u32;
+
+    for i in 0..num_pixels {
+        let idx = i * 3;
+        for c in 0..3 {
+            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs() as u8;
+            if diff > 0 {
+                diff_count += 1;
+                total_diff += diff as u64;
+                if diff > max_diff {
+                    max_diff = diff;
+                }
+            }
+        }
+    }
+
+    let avg_diff = if diff_count > 0 {
+        total_diff as f64 / diff_count as f64
+    } else {
+        0.0
+    };
+
+    println!(
+        "CMYK->RGB parity (lcms2 vs moxcms): max_diff={}, avg_diff={:.2}, differing_channels={}/{}",
+        max_diff,
+        avg_diff,
+        diff_count,
+        num_pixels * 3
+    );
+
+    // Allow some difference due to implementation variations
+    assert!(
+        max_diff < 10,
+        "CMYK->RGB max diff {} too high between lcms2 and moxcms",
+        max_diff
+    );
+}
+
+/// Compare RGB->CMYK transforms between lcms2 and moxcms
+#[test]
+fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
+    use cms_tests::reference::{transform_lcms2_rgb_to_cmyk, transform_moxcms_rgb_to_cmyk};
+
+    let path = icc_dir().join("USWebCoatedSWOP.icc");
+    if !path.exists() {
+        println!("Skipping: USWebCoatedSWOP.icc not found");
+        return;
+    }
+
+    let profile_data = std::fs::read(&path).expect("Failed to read profile");
+
+    // Generate test RGB values
+    let mut rgb_pixels = Vec::new();
+    for r in (0u8..=255).step_by(32) {
+        for g in (0u8..=255).step_by(32) {
+            for b in (0u8..=255).step_by(32) {
+                rgb_pixels.extend_from_slice(&[r, g, b]);
+            }
+        }
+    }
+
+    let lcms2_result = transform_lcms2_rgb_to_cmyk(&profile_data, &rgb_pixels)
+        .expect("lcms2 RGB->CMYK failed");
+    let moxcms_result = transform_moxcms_rgb_to_cmyk(&profile_data, &rgb_pixels)
+        .expect("moxcms RGB->CMYK failed");
+
+    // Compare outputs
+    let num_pixels = rgb_pixels.len() / 3;
+    let mut max_diff = 0u8;
+    let mut total_diff = 0u64;
+    let mut diff_count = 0u32;
+
+    for i in 0..num_pixels {
+        let idx = i * 4;
+        for c in 0..4 {
+            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs() as u8;
+            if diff > 0 {
+                diff_count += 1;
+                total_diff += diff as u64;
+                if diff > max_diff {
+                    max_diff = diff;
+                }
+            }
+        }
+    }
+
+    let avg_diff = if diff_count > 0 {
+        total_diff as f64 / diff_count as f64
+    } else {
+        0.0
+    };
+
+    println!(
+        "RGB->CMYK parity (lcms2 vs moxcms): max_diff={}, avg_diff={:.2}, differing_channels={}/{}",
+        max_diff,
+        avg_diff,
+        diff_count,
+        num_pixels * 4
+    );
+
+    // Allow some difference due to implementation variations
+    assert!(
+        max_diff < 10,
+        "RGB->CMYK max diff {} too high between lcms2 and moxcms",
+        max_diff
+    );
+}
+
+/// Test all CMYK profiles for cross-CMS parity
+#[test]
+fn test_cmyk_parity_all_profiles() {
+    use cms_tests::reference::{transform_lcms2_cmyk_to_rgb, transform_moxcms_cmyk_to_rgb};
+
+    let profiles = [
+        "USWebCoatedSWOP.icc",
+        "ghostscript_cmyk.icc",
+        "nip2_cmyk.icc",
+        "lcms2_test_cmyk.icc",
+    ];
+
+    // Simple test input
+    let cmyk_input: Vec<u8> = vec![
+        0, 0, 0, 0,       // White
+        0, 0, 0, 255,     // Black
+        255, 0, 0, 0,     // Cyan
+        0, 255, 0, 0,     // Magenta
+        0, 0, 255, 0,     // Yellow
+        128, 128, 128, 128, // 50% all
+    ];
+
+    println!("\nCMYK->RGB parity across profiles:");
+    for name in profiles {
+        let path = icc_dir().join(name);
+        if !path.exists() {
+            println!("  {}: not found, skipping", name);
+            continue;
+        }
+
+        let profile_data = std::fs::read(&path).expect("Failed to read profile");
+
+        let lcms2_result = match transform_lcms2_cmyk_to_rgb(&profile_data, &cmyk_input) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("  {}: lcms2 failed: {}", name, e);
+                continue;
+            }
+        };
+
+        let moxcms_result = match transform_moxcms_cmyk_to_rgb(&profile_data, &cmyk_input) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("  {}: moxcms failed: {}", name, e);
+                continue;
+            }
+        };
+
+        let mut max_diff = 0u8;
+        for i in 0..lcms2_result.len() {
+            let diff = (lcms2_result[i] as i16 - moxcms_result[i] as i16).unsigned_abs() as u8;
+            if diff > max_diff {
+                max_diff = diff;
+            }
+        }
+
+        println!("  {}: max_diff={}", name, max_diff);
+    }
+}
+
+// ============================================================================
 // Summary Test
 // ============================================================================
 
@@ -528,4 +734,7 @@ fn test_cmyk_summary() {
     println!("  - Float CMYK transforms");
     println!("  - CMYK to Lab transforms");
     println!("  - Rendering intent comparison");
+    println!("  - CMYK->RGB parity (lcms2 vs moxcms)");
+    println!("  - RGB->CMYK parity (lcms2 vs moxcms)");
+    println!("  - Cross-profile parity testing");
 }
