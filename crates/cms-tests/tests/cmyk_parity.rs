@@ -13,6 +13,35 @@ use lcms2::{Intent, PixelFormat, Profile};
 use std::path::Path;
 use std::slice;
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/// Maximum allowed difference between lcms2 and moxcms for CMYK->RGB transforms.
+/// This accounts for implementation differences in gamut mapping and rounding.
+const CMYK_TO_RGB_PARITY_TOLERANCE: u16 = 10;
+
+/// Maximum allowed difference between lcms2 and moxcms for RGB->CMYK transforms.
+/// Higher than CMYK->RGB because RGB->CMYK involves more complex gamut mapping
+/// and black generation algorithms can differ between implementations.
+const RGB_TO_CMYK_PARITY_TOLERANCE: u16 = 10;
+
+/// Maximum allowed delta for CMYK->RGB->CMYK roundtrip.
+/// High tolerance because sRGB gamut is smaller than CMYK - out-of-gamut
+/// colors are clipped and cannot round-trip perfectly.
+const ROUNDTRIP_GAMUT_TOLERANCE: u16 = 200;
+
+/// Step size for iterating through color space in exhaustive tests.
+/// 32 gives us 9 values per channel (0, 32, 64, ... 256 clamped to 255).
+const COLOR_SAMPLE_STEP: usize = 32;
+
+/// Coarser step for K channel to reduce test time while maintaining coverage.
+const K_CHANNEL_SAMPLE_STEP: usize = 64;
+
+// ============================================================================
+// Test Helpers
+// ============================================================================
+
 /// Path to ICC profiles directory
 fn icc_dir() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/icc"))
@@ -241,10 +270,10 @@ fn test_cmyk_srgb_roundtrip() {
     let mut total_delta = 0u64;
     let mut count = 0u32;
 
-    for c in (0u8..=255).step_by(32) {
-        for m in (0u8..=255).step_by(32) {
-            for y in (0u8..=255).step_by(32) {
-                for k in (0u8..=255).step_by(64) {
+    for c in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+        for m in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+            for y in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+                for k in (0u8..=255).step_by(K_CHANNEL_SAMPLE_STEP) {
                     let original = [c, m, y, k];
                     let mut rgb = [0u8; 3];
                     let mut roundtrip = [0u8; 4];
@@ -281,9 +310,10 @@ fn test_cmyk_srgb_roundtrip() {
     // sRGB has a smaller gamut than CMYK, so out-of-gamut colors are clipped
     // Allow significant deviation but catch catastrophic failures
     assert!(
-        max_delta < 200,
-        "Roundtrip max delta {} too high (gamut mapping expected)",
-        max_delta
+        max_delta < ROUNDTRIP_GAMUT_TOLERANCE,
+        "Roundtrip max delta {} exceeds tolerance {} (gamut mapping expected but this is excessive)",
+        max_delta,
+        ROUNDTRIP_GAMUT_TOLERANCE
     );
 }
 
@@ -532,10 +562,10 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
 
     // Generate test CMYK values
     let mut cmyk_pixels = Vec::new();
-    for c in (0u8..=255).step_by(32) {
-        for m in (0u8..=255).step_by(64) {
-            for y in (0u8..=255).step_by(64) {
-                for k in (0u8..=255).step_by(64) {
+    for c in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+        for m in (0u8..=255).step_by(K_CHANNEL_SAMPLE_STEP) {
+            for y in (0u8..=255).step_by(K_CHANNEL_SAMPLE_STEP) {
+                for k in (0u8..=255).step_by(K_CHANNEL_SAMPLE_STEP) {
                     cmyk_pixels.extend_from_slice(&[c, m, y, k]);
                 }
             }
@@ -549,14 +579,14 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
 
     // Compare outputs
     let num_pixels = cmyk_pixels.len() / 4;
-    let mut max_diff = 0u8;
+    let mut max_diff = 0u16;
     let mut total_diff = 0u64;
-    let mut diff_count = 0u32;
+    let mut diff_count = 0u64;
 
     for i in 0..num_pixels {
         let idx = i * 3;
         for c in 0..3 {
-            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs() as u8;
+            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
             if diff > 0 {
                 diff_count += 1;
                 total_diff += diff as u64;
@@ -583,9 +613,10 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
 
     // Allow some difference due to implementation variations
     assert!(
-        max_diff < 10,
-        "CMYK->RGB max diff {} too high between lcms2 and moxcms",
-        max_diff
+        max_diff < CMYK_TO_RGB_PARITY_TOLERANCE,
+        "CMYK->RGB max diff {} exceeds tolerance {} between lcms2 and moxcms",
+        max_diff,
+        CMYK_TO_RGB_PARITY_TOLERANCE
     );
 }
 
@@ -604,9 +635,9 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
 
     // Generate test RGB values
     let mut rgb_pixels = Vec::new();
-    for r in (0u8..=255).step_by(32) {
-        for g in (0u8..=255).step_by(32) {
-            for b in (0u8..=255).step_by(32) {
+    for r in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+        for g in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
+            for b in (0u8..=255).step_by(COLOR_SAMPLE_STEP) {
                 rgb_pixels.extend_from_slice(&[r, g, b]);
             }
         }
@@ -619,14 +650,14 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
 
     // Compare outputs
     let num_pixels = rgb_pixels.len() / 3;
-    let mut max_diff = 0u8;
+    let mut max_diff = 0u16;
     let mut total_diff = 0u64;
-    let mut diff_count = 0u32;
+    let mut diff_count = 0u64;
 
     for i in 0..num_pixels {
         let idx = i * 4;
         for c in 0..4 {
-            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs() as u8;
+            let diff = (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
             if diff > 0 {
                 diff_count += 1;
                 total_diff += diff as u64;
@@ -653,9 +684,10 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
 
     // Allow some difference due to implementation variations
     assert!(
-        max_diff < 10,
-        "RGB->CMYK max diff {} too high between lcms2 and moxcms",
-        max_diff
+        max_diff < RGB_TO_CMYK_PARITY_TOLERANCE,
+        "RGB->CMYK max diff {} exceeds tolerance {} between lcms2 and moxcms",
+        max_diff,
+        RGB_TO_CMYK_PARITY_TOLERANCE
     );
 }
 
@@ -707,9 +739,9 @@ fn test_cmyk_parity_all_profiles() {
             }
         };
 
-        let mut max_diff = 0u8;
+        let mut max_diff = 0u16;
         for i in 0..lcms2_result.len() {
-            let diff = (lcms2_result[i] as i16 - moxcms_result[i] as i16).unsigned_abs() as u8;
+            let diff = (lcms2_result[i] as i16 - moxcms_result[i] as i16).unsigned_abs();
             if diff > max_diff {
                 max_diff = diff;
             }
@@ -719,22 +751,3 @@ fn test_cmyk_parity_all_profiles() {
     }
 }
 
-// ============================================================================
-// Summary Test
-// ============================================================================
-
-#[test]
-fn test_cmyk_summary() {
-    println!("CMYK parity tests summary:");
-    println!("  - CMYK profile loading");
-    println!("  - CMYK to sRGB transforms");
-    println!("  - sRGB to CMYK transforms");
-    println!("  - CMYK roundtrip stability");
-    println!("  - Multi-profile comparison");
-    println!("  - Float CMYK transforms");
-    println!("  - CMYK to Lab transforms");
-    println!("  - Rendering intent comparison");
-    println!("  - CMYK->RGB parity (lcms2 vs moxcms)");
-    println!("  - RGB->CMYK parity (lcms2 vs moxcms)");
-    println!("  - Cross-profile parity testing");
-}
