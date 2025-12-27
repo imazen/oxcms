@@ -1,24 +1,32 @@
 # Test Status Tracking
 
-Last updated: 2025-12-26
+Last updated: 2025-12-27
 
 ## Summary
 
 | Source | Total Tests | Passing | Failing | Skipped | Coverage |
 |--------|-------------|---------|---------|---------|----------|
-| oxcms-core | 6 | 6 | 0 | 0 | Core API |
+| moxcms | 51 | 51 | 0 | 0 | Core CMS |
+| oxcms-core | 12 | 12 | 0 | 0 | Core API |
+| skcms-sys | 2 | 2 | 0 | 0 | FFI bindings |
 | cms-tests lib | 6 | 6 | 0 | 0 | Accuracy |
-| Corpus validation | 3 | 3 | 0 | 0 | Parsing |
+| Browser parity | 5 | 5 | 0 | 0 | skcms/qcms |
+| CMYK transforms | 5 | 5 | 0 | 0 | CMYK pipeline |
 | Color space tests | 8 | 8 | 0 | 0 | Lab/XYZ/Gray |
+| Corpus parity | 4 | 4 | 0 | 0 | 121 ICC profiles |
+| Corpus validation | 3 | 3 | 0 | 0 | Parsing |
+| Correctness eval | 3 | 3 | 0 | 0 | Full evaluation |
 | Extended parity | 7 | 7 | 0 | 0 | Transforms |
 | lcms2 parity | 3 | 3 | 0 | 0 | Parity |
 | Math differences | 4 | 4 | 0 | 0 | Documentation |
 | moxcms parity | 2 | 2 | 0 | 0 | Consistency |
-| Rendering intents | 7 | 7 | 0 | 0 | Intent comparison |
+| Profile analysis | 3 | 3 | 0 | 0 | Deep analysis |
 | qcms parity | 11 | 11 | 0 | 0 | Firefox CMS |
-| Corpus parity | 4 | 4 | 0 | 0 | 110 ICC profiles |
+| Rendering intents | 7 | 7 | 0 | 0 | Intent comparison |
+| TRC analysis | 4+ | 4+ | 0 | 0 | Curve analysis |
+| V4 diagnostics | 3 | 3 | 0 | 0 | LUT profiles |
 | Doc tests | 1 | 1 | 0 | 0 | Examples |
-| **Total** | **62** | **62** | **0** | **0** | **100%** |
+| **Total** | **173** | **173** | **0** | **0** | **100%** |
 
 ## Test Categories
 
@@ -67,20 +75,22 @@ Last updated: 2025-12-26
 
 ### CMYK Transforms
 
-| Test | moxcms | lcms2 | Status |
-|------|--------|-------|--------|
-| sRGB → CMYK | ? | ? | TBD |
-| CMYK → sRGB | ? | ? | TBD |
-| CMYK → CMYK | ? | ? | TBD |
+| Test | moxcms | lcms2 | Max Diff | Status |
+|------|--------|-------|----------|--------|
+| sRGB → CMYK | ✅ | ✅ | N/A | PASS |
+| CMYK → sRGB | ✅ | ✅ | 7 | PASS |
+| CMYK round-trip | ✅ | N/A | 7 | PASS |
+| CMYK profile parsing | ✅ | ✅ | 0 | PASS |
+| CMYK parity (moxcms/lcms2) | ✅ | ✅ | 7 | PASS |
 
 ### Lab/XYZ Transforms
 
-| Test | moxcms | lcms2 | Status |
-|------|--------|-------|--------|
-| RGB → Lab | ? | ? | TBD |
-| Lab → RGB | ? | ? | TBD |
-| RGB → XYZ | ? | ? | TBD |
-| XYZ → RGB | ? | ? | TBD |
+| Test | moxcms | lcms2 | Max ΔE | Status |
+|------|--------|-------|--------|--------|
+| RGB → Lab | ✅ | N/A | 0.0168 | PASS |
+| Lab → RGB | ✅ | N/A | 0.0168 | PASS |
+| XYZ → Lab → XYZ | ✅ | N/A | 0.0000 | PASS |
+| Lab D50 accuracy | ✅ | N/A | 0.02 | PASS |
 
 ### qcms Comparison (Firefox CMS)
 

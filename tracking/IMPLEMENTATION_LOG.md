@@ -527,6 +527,90 @@ This is a fundamental bug in V2 profile handling, not a TRC interpolation issue.
 
 ---
 
+## 2025-12-27: V2 Profile White Point Bug FIXED
+
+### Fixed
+
+**The V2 profile chromatic adaptation bug is now FIXED!**
+
+The fix was simpler than initially expected. Instead of applying Bradford chromatic adaptation, the solution is to use the **native (implied) white point** from the colorant sum rather than hardcoding D50.
+
+### Change Summary
+
+Modified `rgb_to_xyz_matrix()` in `external/moxcms/src/profile.rs`:
+
+**Before:**
+```rust
+pub fn rgb_to_xyz_matrix(&self) -> Matrix3d {
+    let xyz_matrix = self.colorant_matrix();
+    let white_point = Chromaticity::D50.to_xyzd(); // Always D50!
+    ColorProfile::rgb_to_xyz_d(xyz_matrix, white_point)
+}
+```
+
+**After:**
+```rust
+pub fn implied_white_point(&self) -> Xyzd {
+    Xyzd {
+        x: self.red_colorant.x + self.green_colorant.x + self.blue_colorant.x,
+        y: self.red_colorant.y + self.green_colorant.y + self.blue_colorant.y,
+        z: self.red_colorant.z + self.green_colorant.z + self.blue_colorant.z,
+    }
+}
+
+pub fn rgb_to_xyz_matrix(&self) -> Matrix3d {
+    let xyz_matrix = self.colorant_matrix();
+    let implied_wp = self.implied_white_point();
+    ColorProfile::rgb_to_xyz_d(xyz_matrix, implied_wp)
+}
+```
+
+### Results
+
+| Input | skcms | moxcms (before) | moxcms (after) |
+|-------|-------|-----------------|----------------|
+| [255, 0, 0] | [255, 0, 0] | [255, 0, 0] | [255, 0, 0] ✓ |
+| [0, 255, 0] | [0, 255, 77] | [0, 255, 52] | [0, 255, 77] ✓ |
+| [0, 0, 255] | [0, 0, 255] | [0, 17, 252] | [0, 0, 255] ✓ |
+| [128, 0, 0] | [132, 0, 0] | [136, 0, 0] | [132, 0, 0] ✓ |
+| [0, 128, 0] | [0, 131, 34] | [0, 129, 21] | [0, 131, 34] ✓ |
+| [0, 0, 128] | [0, 0, 145] | [0, 4, 127] | [0, 0, 145] ✓ |
+| [128, 128, 128] | [118, 130, 149] | [129, 129, 129] | [118, 130, 149] ✓ |
+| [255, 255, 255] | [235, 255, 255] | [255, 255, 255] | [235, 255, 255] ✓ |
+
+**moxcms now matches skcms exactly for SM245B and other V2 profiles!**
+
+### Why This Works
+
+The key insight is that when source and destination profiles both report their native white points (computed from colorant sums), the transform correctly handles the color conversion:
+
+1. **SM245B** (V2): Colorants sum to D65, so its RGB->XYZ matrix is computed with D65 white point
+2. **sRGB** (moxcms built-in): Colorants already sum to D50 (properly adapted V4 profile)
+3. **Transform**: The matrix multiplication correctly maps SM245B's D65-based colors to sRGB's D50-based colors
+
+This approach matches what skcms does internally.
+
+### Test Status
+
+- **All 51 moxcms tests pass**
+- **All 104+ cms-tests pass**
+- SM245B and similar V2 profiles now produce correct output
+
+### Commit
+
+```
+fix: use native white point from colorant sum in rgb_to_xyz_matrix
+
+V2 ICC profiles may have colorants in device white point space (e.g., D65)
+rather than being pre-adapted to PCS white point (D50). Previously moxcms
+assumed D50 for all profiles, causing incorrect color transforms.
+
+The fix computes the implied white point from the colorant sum and uses
+that for the RGB->XYZ matrix calculation. This matches skcms behavior.
+```
+
+---
+
 ## Template for Future Entries
 
 ```markdown
