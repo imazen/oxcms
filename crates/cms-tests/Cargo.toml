@@ -99,6 +99,10 @@ path = "tests/lcms2_profiles_transforms.rs"
 name = "lcms2_advanced"
 path = "tests/lcms2_advanced.rs"
 
+[[test]]
+name = "cmyk_parity"
+path = "tests/cmyk_parity.rs"
+
 [[bench]]
 name = "cms_transform"
 harness = false
