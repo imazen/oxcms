@@ -87,6 +87,10 @@ path = "tests/xyb_color_space.rs"
 name = "named_color_profiles"
 path = "tests/named_color_profiles.rs"
 
+[[test]]
+name = "lcms2_testbed"
+path = "tests/lcms2_testbed.rs"
+
 [[bench]]
 name = "cms_transform"
 harness = false
