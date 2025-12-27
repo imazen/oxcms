@@ -170,6 +170,83 @@
 
 ---
 
+## 2025-12-27: skcms Integration & moxcms Parsing Fix
+
+### Added
+- **skcms-sys crate**: FFI bindings to Google's skcms library
+  - C++ SIMD variants: Baseline, Haswell (AVX2), Skylake-X (AVX-512)
+  - Safe Rust wrappers for profile parsing and transforms
+  - Comparable to lcms2 in features, faster for simple transforms
+
+- **Patched moxcms** (external/moxcms):
+  - Forked moxcms v0.8.0 locally with flexible version parsing
+  - ProfileVersion::try_from now accepts v0.x, v2.x, v3.x, v4.x, v5.x
+  - Unknown versions mapped to nearest known version
+
+- **correctness_evaluation.rs**: Comprehensive correctness test harness
+- **profile_analysis.rs**: Deep ICC profile debugging tools
+
+### Changed
+- Workspace now uses local patched moxcms instead of crates.io version
+- Transform tests now compare all 4 CMS implementations
+- Removed corrupted icc.org test profiles (were HTML files from Cloudflare)
+
+### Test Results
+- 121 ICC profiles in corpus (down from 124 after removing corrupted files)
+
+### Parsing Results (4 CMS comparison)
+| CMS | Profiles Parsed | Percentage |
+|-----|-----------------|------------|
+| lcms2 | 117/121 | 97% |
+| skcms | 101/121 | 83% |
+| qcms | 96/121 | 79% |
+| moxcms | 91/121 | **75%** (was 69%) |
+| All 4 | 87/121 | 72% |
+
+### Transform Parity Results (66 profiles all 4 can parse)
+| Category | Count | Percentage |
+|----------|-------|------------|
+| Identical (diff=0) | 22 | 33% |
+| Small diff (≤2) | 25 | 38% |
+| Large diff (>2) | 19 | 29% |
+| **Acceptable (≤2)** | **47** | **71%** |
+
+### Profiles Fixed by Version Patch
+- ibm-t61.icc (v3.4.0) ✓
+- new.icc (v3.4.0) ✓
+- lcms_samsung_syncmaster.icc (v4.29) ✓
+- AdobeColorSpin.icc (v0.0.0) ✓
+- SM245B.icc (v2.0.2) ✓
+
+### Remaining Parsing Gaps
+
+1. **iccMAX/ICC.2 v5.0 profiles** (3 profiles):
+   - sRGB_D65_MAT.icc, sRGB_D65_colorimetric.icc, sRGB_ISO22028.icc
+   - Use new tag types (c2sp, s2cp, svcn, gbd1)
+   - Would require significant parser changes to support
+
+2. **Unsupported parametric curves** (5 profiles):
+   - b2a_no_clut.icc, b2a_too_few_output_channels.icc, etc.
+   - Unknown parametric curve function types
+   - moxcms rejects with MalformedTrcCurve
+
+3. **Fuzz test profiles** (~15 profiles):
+   - Intentionally malformed to test edge cases
+   - Correct to reject these
+
+4. **LUT size limits** (1 profile):
+   - curv_size_overflow.icc
+   - Correctly rejected (CurveLutIsTooLarge)
+
+### Transform Difference Root Causes
+
+1. **LUT interpolation methods**: Different algorithms for 3D LUT interpolation
+2. **TRC precision**: Fixed-point vs floating-point curve evaluation
+3. **Chromatic adaptation**: Slight differences in Bradford matrix precision
+4. **Rounding modes**: Half-up vs nearest-even in final quantization
+
+---
+
 ## Template for Future Entries
 
 ```markdown
