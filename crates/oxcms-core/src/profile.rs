@@ -67,6 +67,69 @@ impl ColorProfile {
         }
     }
 
+    /// Create a DCI-P3 profile (theatrical cinema)
+    pub fn new_dci_p3() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_dci_p3(),
+        }
+    }
+
+    /// Create a ProPhoto RGB profile (wide gamut)
+    pub fn new_pro_photo_rgb() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_pro_photo_rgb(),
+        }
+    }
+
+    /// Create a Display P3 PQ profile (HDR)
+    pub fn new_display_p3_pq() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_display_p3_pq(),
+        }
+    }
+
+    /// Create a BT.2020 PQ profile (HDR)
+    pub fn new_bt2020_pq() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_bt2020_pq(),
+        }
+    }
+
+    /// Create a BT.2020 HLG profile (HDR)
+    pub fn new_bt2020_hlg() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_bt2020_hlg(),
+        }
+    }
+
+    /// Create a Lab profile (CIELAB D50)
+    pub fn new_lab() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_lab(),
+        }
+    }
+
+    /// Create an ACES 2065-1 linear profile (film/VFX)
+    pub fn new_aces_linear() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_aces_aces_2065_1_linear(),
+        }
+    }
+
+    /// Create an ACEScg linear profile (film/VFX)
+    pub fn new_aces_cg() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_aces_cg_linear(),
+        }
+    }
+
+    /// Create a profile from CICP parameters (commonly used in video)
+    pub fn from_cicp(cicp: moxcms::CicpProfile) -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_from_cicp(cicp),
+        }
+    }
+
     /// Get the profile's color space
     pub fn color_space(&self) -> moxcms::DataColorSpace {
         self.inner.color_space
@@ -202,5 +265,52 @@ mod tests {
     fn test_reject_small_profile() {
         let small_data = [0u8; 64];
         assert!(ColorProfile::from_bytes(&small_data).is_err());
+    }
+
+    #[test]
+    fn test_lab_profile() {
+        let profile = ColorProfile::new_lab();
+        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Lab);
+    }
+
+    #[test]
+    fn test_pro_photo_rgb_profile() {
+        let profile = ColorProfile::new_pro_photo_rgb();
+        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert!(profile.is_matrix_shaper());
+    }
+
+    #[test]
+    fn test_dci_p3_profile() {
+        let profile = ColorProfile::new_dci_p3();
+        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert!(profile.is_matrix_shaper());
+    }
+
+    #[test]
+    fn test_hdr_profiles() {
+        let p3_pq = ColorProfile::new_display_p3_pq();
+        assert_eq!(p3_pq.color_space(), moxcms::DataColorSpace::Rgb);
+
+        let bt2020_pq = ColorProfile::new_bt2020_pq();
+        assert_eq!(bt2020_pq.color_space(), moxcms::DataColorSpace::Rgb);
+
+        let bt2020_hlg = ColorProfile::new_bt2020_hlg();
+        assert_eq!(bt2020_hlg.color_space(), moxcms::DataColorSpace::Rgb);
+    }
+
+    #[test]
+    fn test_aces_profiles() {
+        let aces = ColorProfile::new_aces_linear();
+        assert_eq!(aces.color_space(), moxcms::DataColorSpace::Rgb);
+
+        let aces_cg = ColorProfile::new_aces_cg();
+        assert_eq!(aces_cg.color_space(), moxcms::DataColorSpace::Rgb);
+    }
+
+    #[test]
+    fn test_grayscale_profile() {
+        let gray = ColorProfile::new_gray_with_gamma(2.2);
+        assert_eq!(gray.color_space(), moxcms::DataColorSpace::Gray);
     }
 }
