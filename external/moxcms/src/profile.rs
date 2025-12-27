@@ -1313,10 +1313,26 @@ impl ColorProfile {
         v
     }
 
+    /// Returns the native (implied) white point from colorant sum.
+    /// For properly adapted V4 profiles, this should be D50.
+    /// For V2 profiles with unadapted colorants, this may be D65 or another illuminant.
+    pub fn implied_white_point(&self) -> Xyzd {
+        Xyzd {
+            x: self.red_colorant.x + self.green_colorant.x + self.blue_colorant.x,
+            y: self.red_colorant.y + self.green_colorant.y + self.blue_colorant.y,
+            z: self.red_colorant.z + self.green_colorant.z + self.blue_colorant.z,
+        }
+    }
+
     pub fn rgb_to_xyz_matrix(&self) -> Matrix3d {
         let xyz_matrix = self.colorant_matrix();
-        let white_point = Chromaticity::D50.to_xyzd();
-        ColorProfile::rgb_to_xyz_d(xyz_matrix, white_point)
+
+        // Use the native (implied) white point from colorant sum
+        // This handles V2 profiles with unadapted colorants correctly
+        let implied_wp = self.implied_white_point();
+
+        // Compute RGB->XYZ matrix so [1,1,1] maps to the implied white point
+        ColorProfile::rgb_to_xyz_d(xyz_matrix, implied_wp)
     }
 
     /// Computes transform matrix RGB -> XYZ -> RGB
