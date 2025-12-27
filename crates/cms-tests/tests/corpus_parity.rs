@@ -1,10 +1,11 @@
 //! Corpus-wide parity tests
 //!
-//! Tests all ICC profiles from the testdata corpus against qcms, moxcms, and lcms2.
+//! Tests all ICC profiles from the testdata corpus against qcms, moxcms, lcms2, and skcms.
 //! Validates parsing, transform creation, and output consistency.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
 
 /// Get the testdata directory
 fn testdata_dir() -> PathBuf {
@@ -51,7 +52,7 @@ enum ParseResult {
     Failed(String),
 }
 
-/// Test profile parsing across all three CMS implementations
+/// Test profile parsing across all four CMS implementations
 #[test]
 fn test_corpus_profile_parsing() {
     let profiles = collect_profiles();
@@ -61,8 +62,9 @@ fn test_corpus_profile_parsing() {
     let mut qcms_success = 0;
     let mut moxcms_success = 0;
     let mut lcms2_success = 0;
+    let mut skcms_success = 0;
     let mut all_success = 0;
-    let mut failures: Vec<(PathBuf, String, String, String)> = Vec::new();
+    let mut failures: Vec<(PathBuf, String, String, String, String)> = Vec::new();
 
     for profile_path in &profiles {
         let data = match std::fs::read(profile_path) {
@@ -106,10 +108,20 @@ fn test_corpus_profile_parsing() {
             Err(e) => ParseResult::Failed(format!("{:?}", e)),
         };
 
-        // Count profiles all three can parse
+        // Try skcms
+        let skcms_result = match skcms_sys::parse_icc_profile(&data) {
+            Some(_) => {
+                skcms_success += 1;
+                ParseResult::Success
+            }
+            None => ParseResult::Failed("parse failed".to_string()),
+        };
+
+        // Count profiles all four can parse
         if matches!(qcms_result, ParseResult::Success)
             && matches!(moxcms_result, ParseResult::Success)
             && matches!(lcms2_result, ParseResult::Success)
+            && matches!(skcms_result, ParseResult::Success)
         {
             all_success += 1;
         } else {
@@ -125,7 +137,11 @@ fn test_corpus_profile_parsing() {
                 ParseResult::Success => "OK".to_string(),
                 ParseResult::Failed(e) => e.clone(),
             };
-            failures.push((profile_path.clone(), q, m, l));
+            let s = match &skcms_result {
+                ParseResult::Success => "OK".to_string(),
+                ParseResult::Failed(e) => e.clone(),
+            };
+            failures.push((profile_path.clone(), q, m, l, s));
         }
     }
 
@@ -133,20 +149,21 @@ fn test_corpus_profile_parsing() {
     eprintln!("    qcms:   {}/{} profiles", qcms_success, profiles.len());
     eprintln!("    moxcms: {}/{} profiles", moxcms_success, profiles.len());
     eprintln!("    lcms2:  {}/{} profiles", lcms2_success, profiles.len());
-    eprintln!("    All 3:  {}/{} profiles", all_success, profiles.len());
+    eprintln!("    skcms:  {}/{} profiles", skcms_success, profiles.len());
+    eprintln!("    All 4:  {}/{} profiles", all_success, profiles.len());
 
     if !failures.is_empty() {
         eprintln!("\n  Profiles with parsing differences:");
-        for (path, q, m, l) in failures.iter().take(10) {
+        for (path, q, m, l, s) in failures.iter().take(10) {
             let name = path.file_name().unwrap().to_string_lossy();
-            eprintln!("    {}: qcms={}, moxcms={}, lcms2={}", name, q, m, l);
+            eprintln!("    {}: qcms={}, moxcms={}, lcms2={}, skcms={}", name, q, m, l, s);
         }
         if failures.len() > 10 {
             eprintln!("    ... and {} more", failures.len() - 10);
         }
     }
 
-    // We expect at least 50% of profiles to parse with all three
+    // We expect at least 50% of profiles to parse with all four
     assert!(
         all_success >= profiles.len() / 2,
         "Expected at least half of profiles to parse with all CMS"

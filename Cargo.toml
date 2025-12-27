@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/oxcms-core",
     "crates/cms-tests",
+    "crates/skcms-sys",
 ]
 
 [workspace.package]
@@ -16,6 +17,7 @@ repository = "https://github.com/user/oxcms"
 moxcms = "0.7"
 lcms2 = "6"
 qcms = "0.3"
+skcms-sys = { path = "crates/skcms-sys" }
 
 # Color science
 palette = "0.7"
