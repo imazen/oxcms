@@ -4,6 +4,7 @@ use std::path::PathBuf;
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let skcms_dir = manifest_dir.join("skcms");
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
     // Check if skcms source exists
     if !skcms_dir.join("skcms.cc").exists() {
@@ -31,17 +32,20 @@ fn main() {
         .file(skcms_dir.join("src/skcms_TransformBaseline.cc"))
         .compile("skcms_base");
 
-    // Compile HSW (Haswell) variant with AVX2/F16C
-    base.clone()
-        .file(skcms_dir.join("src/skcms_TransformHsw.cc"))
-        .flag("-march=haswell")
-        .compile("skcms_hsw");
+    // x86/x86_64-specific SIMD variants
+    if target_arch == "x86_64" || target_arch == "x86" {
+        // Compile HSW (Haswell) variant with AVX2/F16C
+        base.clone()
+            .file(skcms_dir.join("src/skcms_TransformHsw.cc"))
+            .flag("-march=haswell")
+            .compile("skcms_hsw");
 
-    // Compile SKX (Skylake-X) variant with AVX-512
-    base.clone()
-        .file(skcms_dir.join("src/skcms_TransformSkx.cc"))
-        .flag("-march=skylake-avx512")
-        .compile("skcms_skx");
+        // Compile SKX (Skylake-X) variant with AVX-512
+        base.clone()
+            .file(skcms_dir.join("src/skcms_TransformSkx.cc"))
+            .flag("-march=skylake-avx512")
+            .compile("skcms_skx");
+    }
 
     println!("cargo:rerun-if-changed={}", skcms_dir.display());
 }
