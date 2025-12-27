@@ -170,15 +170,16 @@ fn test_corpus_profile_parsing() {
     );
 }
 
-/// Test transform parity on profiles all three CMS can parse
+/// Test transform parity on profiles all four CMS can parse
 #[test]
 fn test_corpus_transform_parity() {
     let profiles = collect_profiles();
-    eprintln!("\nCorpus transform parity test:");
+    eprintln!("\nCorpus transform parity test (qcms, moxcms, lcms2, skcms):");
 
     let srgb_qcms = qcms::Profile::new_sRGB();
     let srgb_moxcms = moxcms::ColorProfile::new_srgb();
     let srgb_lcms2 = lcms2::Profile::new_srgb();
+    let srgb_skcms = skcms_sys::srgb_profile();
 
     let mut tested = 0;
     let mut identical = 0;
@@ -228,7 +229,7 @@ fn test_corpus_transform_parity() {
             continue;
         }
 
-        // Try to load with all three
+        // Try to load with all four CMS
         let qcms_profile = match qcms::Profile::new_from_slice(&data, false) {
             Some(p) => p,
             None => continue,
@@ -242,6 +243,11 @@ fn test_corpus_transform_parity() {
         let lcms2_profile = match lcms2::Profile::new_icc(&data) {
             Ok(p) => p,
             Err(_) => continue,
+        };
+
+        let skcms_profile = match skcms_sys::parse_icc_profile(&data) {
+            Some(p) => p,
+            None => continue,
         };
 
         // Create transforms: loaded profile -> sRGB
@@ -301,12 +307,26 @@ fn test_corpus_transform_parity() {
             let mut lcms2_out = [0u8; 3];
             lcms2_transform.transform_pixels(color, &mut lcms2_out);
 
-            // Compare all pairs
+            // skcms
+            let mut skcms_out = [0u8; 3];
+            skcms_sys::transform(
+                color,
+                skcms_PixelFormat::RGB_888,
+                skcms_AlphaFormat::Opaque,
+                &skcms_profile,
+                &mut skcms_out,
+                skcms_PixelFormat::RGB_888,
+                skcms_AlphaFormat::Opaque,
+                srgb_skcms,
+                1,
+            );
+
+            // Compare all pairs (using lcms2 as reference)
             for i in 0..3 {
                 max_diff = max_diff
-                    .max((qcms_data[i] as i32 - moxcms_out[i] as i32).abs())
                     .max((qcms_data[i] as i32 - lcms2_out[i] as i32).abs())
-                    .max((moxcms_out[i] as i32 - lcms2_out[i] as i32).abs());
+                    .max((moxcms_out[i] as i32 - lcms2_out[i] as i32).abs())
+                    .max((skcms_out[i] as i32 - lcms2_out[i] as i32).abs());
             }
         }
 
