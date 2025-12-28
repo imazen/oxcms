@@ -14,7 +14,7 @@ use std::ptr;
 
 // ColorSync FFI bindings
 #[link(name = "ColorSync", kind = "framework")]
-extern "C" {
+unsafe extern "C" {
     fn ColorSyncProfileCreateWithURL(
         url: CFURLRef,
         options: CFDictionaryRef,
@@ -40,7 +40,7 @@ extern "C" {
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
-extern "C" {
+unsafe extern "C" {
     fn CFURLCreateWithFileSystemPath(
         allocator: CFAllocatorRef,
         file_path: CFStringRef,
