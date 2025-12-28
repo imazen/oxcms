@@ -18,9 +18,24 @@ Combine the best of all CMS implementations:
 | Phase | Status | Description |
 |-------|--------|-------------|
 | Phase 1: Test Infrastructure | **Complete** | Parity tests, CI, documentation |
-| Phase 2: Independent Implementation | Planned | Replace moxcms wrapper with own impl |
+| Phase 2: Core Implementation | In Progress | See "Relationship with moxcms" below |
 | Phase 3: Feature Parity | Planned | CMYK, DeviceLink, advanced features |
 | Phase 4: Beyond lcms2 | Planned | HDR, fuzzing, profile creation |
+
+### Relationship with moxcms
+
+oxcms currently wraps [moxcms](https://github.com/awxkee/moxcms), an excellent Rust CMS by [@awxkee](https://github.com/awxkee). We're actively contributing bug fixes upstream:
+
+- [PR #139](https://github.com/awxkee/moxcms/pull/139) - ARM64 NEON register fix
+- [PR #140](https://github.com/awxkee/moxcms/pull/140) - V2 ICC white point handling
+- [PR #141](https://github.com/awxkee/moxcms/pull/141) - Flexible version parsing
+
+**The long-term approach is undecided.** We're evaluating:
+1. **Continue wrapping** - Maintain oxcms as a stable API layer over moxcms
+2. **Deeper collaboration** - Contribute features directly to moxcms
+3. **Independent implementation** - Build from scratch if our requirements diverge
+
+We prefer options 1 or 2. The goal is to improve the Rust color management ecosystem, not fragment it.
 
 ### Phase 1 Achievements
 
@@ -34,10 +49,10 @@ Combine the best of all CMS implementations:
 
 ### Current Implementation
 
-`oxcms-core` is currently a thin wrapper over moxcms:
-- Provides stable API surface
-- All transforms delegated to moxcms
-- Next phase: build independent implementation
+`oxcms-core` provides a stable API layer:
+- Clean public types that don't leak moxcms internals
+- All transforms currently delegated to moxcms
+- Additional validation and error handling
 
 ## Quick Start
 
@@ -143,9 +158,9 @@ Before using in production:
 
 MIT OR Apache-2.0
 
-## Sources
+## Sources & Acknowledgments
 
-- [moxcms](https://github.com/awxkee/moxcms) - Our fork with ARM64 fix
+- [moxcms](https://github.com/awxkee/moxcms) by [@awxkee](https://github.com/awxkee) - Fast Rust CMS we build upon
 - [LittleCMS](https://www.littlecms.com/) - Industry standard reference
 - [skcms](https://skia.googlesource.com/skcms/) - Chrome's CMS
 - [qcms](https://github.com/nicholasbishop/qcms-rust) - Firefox's CMS
