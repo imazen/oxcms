@@ -3,6 +3,7 @@
 //! This module provides ICC profile parsing and manipulation.
 //! It wraps moxcms::ColorProfile with additional validation.
 
+use crate::types::{ColorSpace, Matrix3x3, ProfileClass, ProfileVersion, RenderingIntent, XyzColor};
 use crate::{Error, Result};
 
 /// ICC Color Profile
@@ -57,6 +58,16 @@ impl ColorProfile {
         // BT.709 uses same primaries as sRGB
         Self {
             inner: moxcms::ColorProfile::new_srgb(),
+        }
+    }
+
+    /// Create a grayscale profile with gamma 1.0 (linear)
+    ///
+    /// For linear RGB workflows, use sRGB with a gamma 1.0 grayscale profile
+    /// combined with the color primaries from the appropriate RGB profile.
+    pub fn new_linear_gray() -> Self {
+        Self {
+            inner: moxcms::ColorProfile::new_gray_with_gamma(1.0),
         }
     }
 
@@ -131,28 +142,28 @@ impl ColorProfile {
     }
 
     /// Get the profile's color space
-    pub fn color_space(&self) -> moxcms::DataColorSpace {
-        self.inner.color_space
+    pub fn color_space(&self) -> ColorSpace {
+        self.inner.color_space.into()
     }
 
     /// Get the profile connection space (PCS)
-    pub fn pcs(&self) -> moxcms::DataColorSpace {
-        self.inner.pcs
+    pub fn pcs(&self) -> ColorSpace {
+        self.inner.pcs.into()
     }
 
     /// Get the profile version
-    pub fn version(&self) -> moxcms::ProfileVersion {
-        self.inner.version()
+    pub fn version(&self) -> ProfileVersion {
+        self.inner.version().into()
     }
 
     /// Get the profile class
-    pub fn profile_class(&self) -> moxcms::ProfileClass {
-        self.inner.profile_class
+    pub fn profile_class(&self) -> ProfileClass {
+        self.inner.profile_class.into()
     }
 
     /// Get the rendering intent
-    pub fn rendering_intent(&self) -> moxcms::RenderingIntent {
-        self.inner.rendering_intent
+    pub fn rendering_intent(&self) -> RenderingIntent {
+        self.inner.rendering_intent.into()
     }
 
     /// Check if this is a matrix-shaper profile
@@ -160,14 +171,19 @@ impl ColorProfile {
         self.inner.is_matrix_shaper()
     }
 
+    /// Check if this is a CMYK profile
+    pub fn is_cmyk(&self) -> bool {
+        matches!(self.inner.color_space, moxcms::DataColorSpace::Cmyk)
+    }
+
     /// Get the colorant matrix (for RGB profiles)
-    pub fn colorant_matrix(&self) -> moxcms::Matrix3d {
-        self.inner.colorant_matrix()
+    pub fn colorant_matrix(&self) -> Matrix3x3 {
+        self.inner.colorant_matrix().into()
     }
 
     /// Get the white point
-    pub fn white_point(&self) -> moxcms::Xyzd {
-        self.inner.white_point
+    pub fn white_point(&self) -> XyzColor {
+        self.inner.white_point.into()
     }
 
     /// Get description text if available
@@ -250,14 +266,14 @@ mod tests {
     #[test]
     fn test_srgb_profile() {
         let profile = ColorProfile::new_srgb();
-        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(profile.color_space(), ColorSpace::Rgb);
         assert!(profile.is_matrix_shaper());
     }
 
     #[test]
     fn test_display_p3_profile() {
         let profile = ColorProfile::new_display_p3();
-        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(profile.color_space(), ColorSpace::Rgb);
         assert!(profile.is_matrix_shaper());
     }
 
@@ -270,47 +286,53 @@ mod tests {
     #[test]
     fn test_lab_profile() {
         let profile = ColorProfile::new_lab();
-        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Lab);
+        assert_eq!(profile.color_space(), ColorSpace::Lab);
     }
 
     #[test]
     fn test_pro_photo_rgb_profile() {
         let profile = ColorProfile::new_pro_photo_rgb();
-        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(profile.color_space(), ColorSpace::Rgb);
         assert!(profile.is_matrix_shaper());
     }
 
     #[test]
     fn test_dci_p3_profile() {
         let profile = ColorProfile::new_dci_p3();
-        assert_eq!(profile.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(profile.color_space(), ColorSpace::Rgb);
         assert!(profile.is_matrix_shaper());
     }
 
     #[test]
     fn test_hdr_profiles() {
         let p3_pq = ColorProfile::new_display_p3_pq();
-        assert_eq!(p3_pq.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(p3_pq.color_space(), ColorSpace::Rgb);
 
         let bt2020_pq = ColorProfile::new_bt2020_pq();
-        assert_eq!(bt2020_pq.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(bt2020_pq.color_space(), ColorSpace::Rgb);
 
         let bt2020_hlg = ColorProfile::new_bt2020_hlg();
-        assert_eq!(bt2020_hlg.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(bt2020_hlg.color_space(), ColorSpace::Rgb);
     }
 
     #[test]
     fn test_aces_profiles() {
         let aces = ColorProfile::new_aces_linear();
-        assert_eq!(aces.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(aces.color_space(), ColorSpace::Rgb);
 
         let aces_cg = ColorProfile::new_aces_cg();
-        assert_eq!(aces_cg.color_space(), moxcms::DataColorSpace::Rgb);
+        assert_eq!(aces_cg.color_space(), ColorSpace::Rgb);
     }
 
     #[test]
     fn test_grayscale_profile() {
         let gray = ColorProfile::new_gray_with_gamma(2.2);
-        assert_eq!(gray.color_space(), moxcms::DataColorSpace::Gray);
+        assert_eq!(gray.color_space(), ColorSpace::Gray);
+    }
+
+    #[test]
+    fn test_linear_gray_profile() {
+        let linear_gray = ColorProfile::new_linear_gray();
+        assert_eq!(linear_gray.color_space(), ColorSpace::Gray);
     }
 }

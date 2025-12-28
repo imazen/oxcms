@@ -51,6 +51,7 @@ pub mod icc;
 pub mod math;
 pub mod pipeline;
 pub mod simd;
+pub mod types;
 
 // Legacy moxcms wrapper modules (Phase 1)
 pub mod error;
@@ -59,9 +60,11 @@ pub mod transform;
 
 pub use error::{Error, Result};
 pub use profile::ColorProfile;
-pub use transform::{Layout, RenderingIntent, Transform, TransformOptions};
+pub use transform::{Layout, Transform, TransformOptions};
+pub use types::{ColorSpace, Matrix3x3, ProfileClass, ProfileVersion, RenderingIntent, XyzColor};
 
 // Re-export useful moxcms types directly
+// Note: ProfileClass, ProfileVersion, RenderingIntent are in types module (own wrappers)
 pub use moxcms::{
     Chromaticity,
     CicpColorPrimaries,
@@ -74,8 +77,6 @@ pub use moxcms::{
     // Matrices
     Matrix3d,
     Matrix3f,
-    ProfileClass,
-    ProfileVersion,
     // Tone curves
     ToneReprCurve,
     TransferCharacteristics,

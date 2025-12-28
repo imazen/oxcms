@@ -132,57 +132,25 @@ JPEG XL bitstream
    Final output
 ```
 
-### Example: JXL Decoder with ICC
+### Example: Basic JXL Decoder (sRGB output)
 
 ```rust
-use oxcms_core::{ColorProfile, Layout, TransformOptions};
+use oxcms_core::color::xyb::{Xyb, xyb_to_linear_rgb};
 
-fn decode_jxl_frame(
-    xyb_data: &[f32],           // XYB pixels from decoder
-    embedded_icc: Option<&[u8]>, // ICC profile from JXL container
-    width: usize,
-    height: usize,
-) -> Vec<u8> {
-    // Step 1: Convert XYB to linear RGB
-    let mut linear_rgb: Vec<f64> = Vec::with_capacity(width * height * 3);
+/// Decode XYB data to sRGB (most common case)
+fn decode_xyb_to_srgb(xyb_data: &[f32]) -> Vec<u8> {
+    // Step 1: Convert XYB to linear RGB (sRGB primaries)
+    let mut result = Vec::with_capacity(xyb_data.len());
     for chunk in xyb_data.chunks_exact(3) {
-        let xyb = xyb::Xyb {
-            x: chunk[0] as f64,
-            y: chunk[1] as f64,
-            b: chunk[2] as f64,
-        };
-        let (r, g, b) = xyb::xyb_to_linear_rgb(&xyb);
-        linear_rgb.extend_from_slice(&[r, g, b]);
+        let xyb = Xyb::new(chunk[0] as f64, chunk[1] as f64, chunk[2] as f64);
+        let (r, g, b) = xyb_to_linear_rgb(&xyb);
+
+        // Step 2: Apply sRGB gamma and convert to u8
+        result.push((srgb_gamma_encode(r.clamp(0.0, 1.0) as f32) * 255.0).round() as u8);
+        result.push((srgb_gamma_encode(g.clamp(0.0, 1.0) as f32) * 255.0).round() as u8);
+        result.push((srgb_gamma_encode(b.clamp(0.0, 1.0) as f32) * 255.0).round() as u8);
     }
-
-    // Step 2: Determine source profile
-    // JXL default is linear sRGB primaries
-    let source_profile = ColorProfile::new_linear_srgb();
-
-    // Step 3: Determine output profile
-    let output_profile = if let Some(icc_data) = embedded_icc {
-        ColorProfile::from_icc(icc_data).unwrap_or_else(|_| ColorProfile::new_srgb())
-    } else {
-        ColorProfile::new_srgb()  // Default output
-    };
-
-    // Step 4: Create ICC transform
-    let transform = source_profile.create_transform_f32(
-        Layout::Rgb,
-        &output_profile,
-        Layout::Rgb,
-        TransformOptions::default(),
-    ).expect("Failed to create transform");
-
-    // Step 5: Apply ICC transform and encode to sRGB gamma
-    let linear_f32: Vec<f32> = linear_rgb.iter().map(|&v| v as f32).collect();
-    let mut output_f32 = vec![0.0f32; linear_f32.len()];
-    transform.transform_f32(&linear_f32, &mut output_f32).unwrap();
-
-    // Step 6: Apply output gamma and convert to u8
-    output_f32.iter()
-        .map(|&v| (srgb_gamma_encode(v.clamp(0.0, 1.0)) * 255.0).round() as u8)
-        .collect()
+    result
 }
 
 fn srgb_gamma_encode(linear: f32) -> f32 {

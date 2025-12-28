@@ -44,11 +44,14 @@ impl From<moxcms::RenderingIntent> for RenderingIntent {
 
 /// Pixel layout for transforms
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Layout {
     /// RGB, 3 channels
     Rgb,
     /// RGBA, 4 channels (alpha preserved)
     Rgba,
+    /// CMYK, 4 channels
+    Cmyk,
     /// Grayscale, 1 channel
     Gray,
     /// Grayscale + Alpha, 2 channels
@@ -60,7 +63,7 @@ impl Layout {
     pub fn channels(&self) -> usize {
         match self {
             Layout::Rgb => 3,
-            Layout::Rgba => 4,
+            Layout::Rgba | Layout::Cmyk => 4,
             Layout::Gray => 1,
             Layout::GrayAlpha => 2,
         }
@@ -70,6 +73,16 @@ impl Layout {
     pub fn has_alpha(&self) -> bool {
         matches!(self, Layout::Rgba | Layout::GrayAlpha)
     }
+
+    /// Check if this is an RGB-family layout
+    pub fn is_rgb(&self) -> bool {
+        matches!(self, Layout::Rgb | Layout::Rgba)
+    }
+
+    /// Check if this is a CMYK layout
+    pub fn is_cmyk(&self) -> bool {
+        matches!(self, Layout::Cmyk)
+    }
 }
 
 impl From<Layout> for moxcms::Layout {
@@ -77,6 +90,7 @@ impl From<Layout> for moxcms::Layout {
         match layout {
             Layout::Rgb => moxcms::Layout::Rgb,
             Layout::Rgba => moxcms::Layout::Rgba,
+            Layout::Cmyk => moxcms::Layout::Cmyka, // 4-channel CMYK uses Cmyka in moxcms
             Layout::Gray => moxcms::Layout::Gray,
             Layout::GrayAlpha => moxcms::Layout::GrayAlpha,
         }
@@ -88,6 +102,7 @@ impl From<moxcms::Layout> for Layout {
         match layout {
             moxcms::Layout::Rgb => Layout::Rgb,
             moxcms::Layout::Rgba => Layout::Rgba,
+            moxcms::Layout::Cmyka => Layout::Cmyk,
             moxcms::Layout::Gray => Layout::Gray,
             moxcms::Layout::GrayAlpha => Layout::GrayAlpha,
             _ => Layout::Rgba, // Multi-ink layouts map to RGBA
@@ -100,7 +115,11 @@ impl From<moxcms::Layout> for Layout {
 pub struct TransformOptions {
     /// Rendering intent
     pub intent: RenderingIntent,
-    /// Enable black point compensation (not yet implemented)
+    /// Enable black point compensation
+    ///
+    /// When enabled, maps the source black point to the destination black point,
+    /// preventing crushed shadows in print workflows. Uses the native BPC pipeline
+    /// via `oxcms_core::pipeline::bpc`. Note: Not yet wired through moxcms transforms.
     pub black_point_compensation: bool,
     /// Use CICP transfer functions when available
     pub allow_use_cicp_transfer: bool,
