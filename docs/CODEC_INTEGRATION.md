@@ -5,7 +5,8 @@ This guide shows how to integrate oxcms into image codecs that need XYB color sp
 ## Table of Contents
 
 - [XYB Color Space (JPEG XL)](#xyb-color-space-jpeg-xl)
-- [CMYK Support](#cmyk-support)
+  - [CMYK in JPEG XL](#cmyk-in-jpeg-xl)
+- [CMYK Support (JPEG/TIFF)](#cmyk-support)
 - [Performance Considerations](#performance-considerations)
 
 ---
@@ -171,6 +172,56 @@ For sRGB gamut inputs:
 | X | -0.05 | +0.05 | Red-green opponent |
 | Y | 0.0 | 0.85 | Luminance-like |
 | B | -0.45 | +0.45 | Blue channel |
+
+### CMYK in JPEG XL
+
+JPEG XL can store CMYK images. Unlike RGB which uses XYB internally, CMYK data bypasses XYB encoding. Key differences from JPEG:
+
+- **Not inverted**: JXL CMYK values are stored directly (no Adobe-style inversion)
+- **Float storage**: Values are typically float, not 8-bit
+- **ICC in codestream**: Profile is in JXL metadata, not APP2 markers
+
+#### Converting JXL CMYK to RGB
+
+Once your JXL decoder gives you CMYK pixel data and the embedded ICC profile, use oxcms:
+
+```rust
+use oxcms_core::{ColorProfile, Layout, TransformOptions};
+
+/// Transform CMYK data from JXL to sRGB for display
+fn cmyk_to_srgb(
+    cmyk_data: &[f32],      // Interleaved CMYK floats [0.0, 1.0]
+    icc_data: &[u8],        // Embedded ICC profile from JXL
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let num_pixels = cmyk_data.len() / 4;
+
+    // Parse the CMYK profile
+    let cmyk_profile = ColorProfile::from_bytes(icc_data)?;
+
+    // Create CMYK → sRGB transform
+    let srgb = ColorProfile::new_srgb();
+    let transform = cmyk_profile.create_transform_f32(
+        Layout::Cmyk,
+        &srgb,
+        Layout::Rgb,
+        TransformOptions {
+            black_point_compensation: true,
+            ..Default::default()
+        },
+    )?;
+
+    // Transform
+    let mut rgb_f32 = vec![0.0f32; num_pixels * 3];
+    transform.transform_f32(cmyk_data, &mut rgb_f32)?;
+
+    // Convert to u8
+    Ok(rgb_f32.iter()
+        .map(|&v| (v.clamp(0.0, 1.0) * 255.0).round() as u8)
+        .collect())
+}
+```
+
+**Note:** Consult your JXL decoder's documentation for how it exposes CMYK channels and ICC profiles. The oxcms transform API works the same regardless of source format.
 
 ---
 
