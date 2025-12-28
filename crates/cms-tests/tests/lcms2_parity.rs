@@ -2,18 +2,36 @@
 //!
 //! These tests verify that oxcms produces identical output to lcms2
 //! for all supported operations.
+//!
+//! # Known Issue: ARM64 NEON Bug in moxcms
+//!
+//! On ARM64, moxcms uses fixed-point NEON code paths (`rgb_xyz_q2_13_opt.rs`,
+//! `rgb_xyz_q1_30_opt.rs`) that have a copy-paste bug where the blue channel
+//! of every second pixel uses the wrong source register:
+//!
+//! ```ignore
+//! // Line 258 in rgb_xyz_q2_13_opt.rs - should use vr1 not vr0!
+//! dst0[dst_cn.b_i() + dst_channels] =
+//!     self.profile.gamma[vget_lane_u16::<2>(vr0) as usize];  // BUG: uses vr0
+//! ```
+//!
+//! This causes deltaE errors up to 40+ on ARM64. The SSE version (which
+//! processes one pixel at a time) does not have this bug.
+//!
+//! Upstream issue should be filed at: https://github.com/awxkee/moxcms
 
 use cms_tests::accuracy::compare_rgb_buffers;
 use cms_tests::patterns::{TestPattern, generate_pattern, sizes};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 
 /// Maximum acceptable deltaE for parity tests.
-/// ARM64 has slightly different floating-point behavior but differences
-/// should still be imperceptible (< 1.0 deltaE).
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-const PARITY_DELTA_E_THRESHOLD: f64 = 1.5;
-
-#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+///
+/// On x86/x86_64, differences should be imperceptible (< 1.0 deltaE).
+///
+/// On ARM64, there's currently an upstream bug in moxcms that causes
+/// huge errors (see module docs). These tests will fail on ARM64 until
+/// the upstream bug is fixed. We keep the threshold at 1.0 to surface
+/// the issue rather than hide it with a larger threshold.
 const PARITY_DELTA_E_THRESHOLD: f64 = 1.0;
 
 /// Compare moxcms and lcms2 for sRGB identity transform
@@ -131,4 +149,76 @@ fn document_math_differences() {
         }
         eprintln!("==========================================\n");
     }
+}
+
+/// Diagnostic test for ARM64 - prints actual values for key colors
+/// This test always passes but logs detailed diagnostics
+#[test]
+fn diagnose_arm64_differences() {
+    eprintln!("\n=== ARM64 DIAGNOSTIC: sRGB Identity Transform ===");
+    eprintln!("Architecture: {}", std::env::consts::ARCH);
+    eprintln!("OS: {}", std::env::consts::OS);
+
+    // Test primaries and key values
+    let test_colors: &[([u8; 3], &str)] = &[
+        ([0, 0, 0], "Black"),
+        ([255, 255, 255], "White"),
+        ([255, 0, 0], "Red"),
+        ([0, 255, 0], "Green"),
+        ([0, 0, 255], "Blue"),
+        ([128, 128, 128], "Mid Gray"),
+        ([1, 1, 1], "Near Black"),
+        ([254, 254, 254], "Near White"),
+        ([255, 128, 0], "Orange"),
+        ([128, 0, 255], "Purple"),
+    ];
+
+    let mut input = Vec::new();
+    for (rgb, _) in test_colors {
+        input.extend_from_slice(rgb);
+    }
+
+    let moxcms_output = transform_moxcms_srgb(&input).expect("moxcms failed");
+    let lcms2_output = transform_lcms2_srgb(&input).expect("lcms2 failed");
+
+    eprintln!("\nColor       | Input       | moxcms      | lcms2       | Match?");
+    eprintln!("------------|-------------|-------------|-------------|-------");
+
+    for (i, (input_rgb, name)) in test_colors.iter().enumerate() {
+        let idx = i * 3;
+        let mox = [moxcms_output[idx], moxcms_output[idx + 1], moxcms_output[idx + 2]];
+        let lcms = [lcms2_output[idx], lcms2_output[idx + 1], lcms2_output[idx + 2]];
+        let matches = mox == lcms;
+
+        eprintln!(
+            "{:11} | {:3},{:3},{:3} | {:3},{:3},{:3} | {:3},{:3},{:3} | {}",
+            name,
+            input_rgb[0], input_rgb[1], input_rgb[2],
+            mox[0], mox[1], mox[2],
+            lcms[0], lcms[1], lcms[2],
+            if matches { "✓" } else { "✗" }
+        );
+    }
+
+    eprintln!("\nIdentity check (should output = input for sRGB->sRGB):");
+    for (i, (input_rgb, name)) in test_colors.iter().enumerate() {
+        let idx = i * 3;
+        let mox = [moxcms_output[idx], moxcms_output[idx + 1], moxcms_output[idx + 2]];
+        let lcms = [lcms2_output[idx], lcms2_output[idx + 1], lcms2_output[idx + 2]];
+
+        let mox_identity = mox == *input_rgb;
+        let lcms_identity = lcms == *input_rgb;
+
+        if !mox_identity || !lcms_identity {
+            eprintln!(
+                "  {}: input={:?} moxcms={:?}({}) lcms2={:?}({})",
+                name, input_rgb, mox,
+                if mox_identity { "ok" } else { "WRONG" },
+                lcms,
+                if lcms_identity { "ok" } else { "WRONG" }
+            );
+        }
+    }
+
+    eprintln!("=================================================\n");
 }
