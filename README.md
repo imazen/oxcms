@@ -15,31 +15,65 @@ Combine the best of all CMS implementations:
 
 ## Status
 
-**Work in Progress** - Currently in Phase 1 (Test Infrastructure)
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1: Test Infrastructure | **Complete** | Parity tests, CI, documentation |
+| Phase 2: Independent Implementation | Planned | Replace moxcms wrapper with own impl |
+| Phase 3: Feature Parity | Planned | CMYK, DeviceLink, advanced features |
+| Phase 4: Beyond lcms2 | Planned | HDR, fuzzing, profile creation |
 
-- [x] Project structure
-- [x] Parity test framework (moxcms vs lcms2)
-- [x] Math difference documentation
-- [x] CI workflow
-- [ ] Port moxcms implementation
-- [ ] Profile-to-profile transforms
-- [ ] CMYK support
-- [ ] DeviceLink profiles
+### Phase 1 Achievements
+
+- [x] Workspace with oxcms-core, cms-tests, skcms-sys
+- [x] 185 parity tests (all passing)
+- [x] Cross-CMS comparison (moxcms, lcms2, qcms, skcms)
+- [x] DeltaE2000 accuracy measurement
+- [x] CI on Ubuntu, Windows, macOS (x86_64 + ARM64)
+- [x] ARM64 NEON bug identified and fixed in moxcms fork
+- [x] Math differences documented
+
+### Current Implementation
+
+`oxcms-core` is currently a thin wrapper over moxcms:
+- Provides stable API surface
+- All transforms delegated to moxcms
+- Next phase: build independent implementation
 
 ## Quick Start
 
 ```bash
-# Fetch test ICC profiles
-./scripts/fetch-test-profiles.sh
-
 # Run all tests
 cargo test --all
 
 # Run parity tests with output
 cargo test -p cms-tests -- --nocapture
 
-# Run specific test
+# Run specific test category
+cargo test -p cms-tests lcms2_parity -- --nocapture
 cargo test -p cms-tests math_differences -- --nocapture
+```
+
+## Example Usage
+
+```rust
+use oxcms_core::{ColorProfile, Layout, TransformOptions};
+
+// Create profiles
+let srgb = ColorProfile::new_srgb();
+let p3 = ColorProfile::new_display_p3();
+
+// Create transform
+let transform = srgb.create_transform_8bit(
+    Layout::Rgb,
+    &p3,
+    Layout::Rgb,
+    TransformOptions::default(),
+).unwrap();
+
+// Transform pixels
+let src = [255u8, 128, 64];
+let mut dst = [0u8; 3];
+transform.transform(&src, &mut dst).unwrap();
 ```
 
 ## Project Structure
@@ -47,36 +81,63 @@ cargo test -p cms-tests math_differences -- --nocapture
 ```
 oxcms/
 ├── crates/
-│   ├── oxcms-core/     # Main CMS implementation
-│   └── cms-tests/      # Cross-CMS parity tests
+│   ├── oxcms-core/     # Main CMS implementation (wraps moxcms)
+│   ├── cms-tests/      # Cross-CMS parity tests
+│   └── skcms-sys/      # FFI bindings to skcms
+├── external/
+│   └── moxcms/         # Forked moxcms with ARM64 fix
 ├── testdata/
-│   ├── profiles/       # Standard ICC profiles
-│   └── corpus/         # Test profiles from each CMS
+│   └── corpus/         # 121 ICC test profiles
 ├── docs/               # Architecture, math differences
-├── plans/              # Roadmap, phase plans
-└── tracking/           # Test status, failing tests
+├── plans/              # Roadmap, implementation plan
+└── tracking/           # Test status
 ```
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap](plans/ROADMAP.md)
-- [Math Differences](docs/MATH_DIFFERENCES.md)
-- [Test Status](tracking/TEST_STATUS.md)
+- [Architecture](docs/ARCHITECTURE.md) - Design and structure
+- [Roadmap](plans/ROADMAP.md) - Implementation phases
+- [Implementation Plan](plans/IMPLEMENTATION_PLAN.md) - Detailed approach
+- [Math Differences](docs/MATH_DIFFERENCES.md) - CMS comparison results
+- [Test Status](tracking/TEST_STATUS.md) - Current test coverage
 
-## Other CMS Libraries Considered
+## Test Results
+
+All CMS implementations produce **identical output** for sRGB transforms:
+
+| Comparison | Max ΔE | Status |
+|------------|--------|--------|
+| moxcms vs lcms2 | 0.0000 | IDENTICAL |
+| moxcms vs qcms | 0.0000 | IDENTICAL |
+| qcms vs lcms2 | 0.0000 | IDENTICAL |
+
+## Performance Targets
+
+| Operation | Target | Reference |
+|-----------|--------|-----------|
+| sRGB→sRGB 1MP | < 1ms | moxcms baseline |
+| sRGB→P3 1MP | < 2ms | moxcms baseline |
+| ICC parse | < 100μs | moxcms baseline |
+
+Goal: Match or exceed moxcms performance (3x+ faster than lcms2).
+
+## CMS Libraries Compared
 
 | Library | Language | Status |
 |---------|----------|--------|
-| moxcms | Rust | Primary reference |
+| moxcms | Rust | Primary reference, forked with fixes |
 | lcms2 | C | Accuracy reference |
-| skcms | C | Security model reference |
+| skcms | C++ | Security model reference |
 | qcms | Rust | Firefox's CMS |
-| rcms | Rust | GPU-friendly, experimental |
 
 ## AI-Generated Code Notice
 
-This project was developed with assistance from Claude (Anthropic). Not all code has been manually reviewed. Validate independently before production use.
+This project was developed with assistance from Claude (Anthropic). While the code has been tested against multiple reference implementations and passes 185+ tests including cross-CMS parity validation, **not all code has been manually reviewed**.
+
+Before using in production:
+- Review critical code paths for your use case
+- Run your own validation against expected outputs
+- Consider the test suite coverage for your specific requirements
 
 ## License
 
@@ -84,7 +145,7 @@ MIT OR Apache-2.0
 
 ## Sources
 
-- [moxcms](https://github.com/awxkee/moxcms)
-- [LittleCMS](https://www.littlecms.com/)
-- [skcms](https://skia.googlesource.com/skcms/)
-- [qcms](https://github.com/FirefoxGraphics/qcms)
+- [moxcms](https://github.com/awxkee/moxcms) - Our fork with ARM64 fix
+- [LittleCMS](https://www.littlecms.com/) - Industry standard reference
+- [skcms](https://skia.googlesource.com/skcms/) - Chrome's CMS
+- [qcms](https://github.com/nicholasbishop/qcms-rust) - Firefox's CMS
