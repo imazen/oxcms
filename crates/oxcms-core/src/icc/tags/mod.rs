@@ -156,6 +156,46 @@ impl TagData {
             _ => None,
         }
     }
+
+    /// Get as Lut8 data
+    pub fn as_lut8(&self) -> Option<&Lut8Data> {
+        match self {
+            TagData::Lut8(lut) => Some(lut),
+            _ => None,
+        }
+    }
+
+    /// Get as Lut16 data
+    pub fn as_lut16(&self) -> Option<&Lut16Data> {
+        match self {
+            TagData::Lut16(lut) => Some(lut),
+            _ => None,
+        }
+    }
+
+    /// Get as LutAToB data
+    pub fn as_lut_a2b(&self) -> Option<&LutAToBData> {
+        match self {
+            TagData::LutAToB(lut) => Some(lut),
+            _ => None,
+        }
+    }
+
+    /// Get as LutBToA data
+    pub fn as_lut_b2a(&self) -> Option<&LutBToAData> {
+        match self {
+            TagData::LutBToA(lut) => Some(lut),
+            _ => None,
+        }
+    }
+
+    /// Check if this is any kind of LUT tag
+    pub fn is_lut(&self) -> bool {
+        matches!(
+            self,
+            TagData::Lut8(_) | TagData::Lut16(_) | TagData::LutAToB(_) | TagData::LutBToA(_)
+        )
+    }
 }
 
 /// Parse sf32 type as 3x3 matrix

@@ -12,7 +12,8 @@
 //! - Matrix (optional)
 //! - B curves (output)
 
-use crate::icc::tags::{Lut16Data, Lut8Data, LutAToBData, LutBToAData, CurveSegment};
+use crate::icc::tags::{CurveSegment, Lut16Data, Lut8Data, LutAToBData, LutBToAData, TagData};
+use crate::icc::IccError;
 use crate::math::{tetrahedral_interp, trilinear_interp};
 
 /// A LUT-based transform pipeline
@@ -200,6 +201,35 @@ fn eval_parametric(curve_type: u16, params: &[f64], x: f64) -> f64 {
 }
 
 impl LutPipeline {
+    /// Create an identity LUT pipeline (pass-through, no transformation)
+    ///
+    /// Useful for testing and as a fallback.
+    pub fn identity(input_channels: usize, output_channels: usize) -> Self {
+        Self {
+            input_channels,
+            output_channels,
+            input_curves: vec![LutCurve::Identity; input_channels],
+            clut: None,
+            output_curves: vec![LutCurve::Identity; output_channels],
+            use_tetrahedral: true,
+        }
+    }
+
+    /// Create a LUT pipeline from a parsed TagData
+    ///
+    /// Supports Lut8, Lut16, LutAToB, and LutBToA tag types.
+    pub fn from_tag_data(tag: &TagData) -> Result<Self, IccError> {
+        match tag {
+            TagData::Lut8(lut) => Ok(Self::from_lut8(lut)),
+            TagData::Lut16(lut) => Ok(Self::from_lut16(lut)),
+            TagData::LutAToB(lut) => Ok(Self::from_lut_atob(lut)),
+            TagData::LutBToA(lut) => Ok(Self::from_lut_btoa(lut)),
+            _ => Err(IccError::Unsupported(
+                "Tag is not a LUT type".to_string(),
+            )),
+        }
+    }
+
     /// Create a LUT pipeline from Lut8 data
     pub fn from_lut8(lut: &Lut8Data) -> Self {
         // Parse input curves
@@ -366,22 +396,116 @@ impl LutPipeline {
 
     /// Apply CLUT interpolation
     fn apply_clut(&self, input: &[f64], clut: &ClutData) -> Vec<f64> {
-        // Currently only support 3-channel input for simplicity
-        if input.len() != 3 || clut.grid_points.len() < 3 {
-            // For other dimensions, fall back to simpler interpolation
-            return self.apply_clut_generic(input, clut);
+        // For 3-channel input, use optimized interpolation
+        if input.len() == 3 && clut.grid_points.len() >= 3 {
+            let grid_size = clut.grid_points[0];
+            if self.use_tetrahedral {
+                let result =
+                    tetrahedral_interp(&clut.data, grid_size, [input[0], input[1], input[2]]);
+                return result.to_vec();
+            } else {
+                let result =
+                    trilinear_interp(&clut.data, grid_size, [input[0], input[1], input[2]]);
+                return result.to_vec();
+            }
         }
 
-        let grid_size = clut.grid_points[0];
-
-        // Use tetrahedral or trilinear interpolation
-        if self.use_tetrahedral {
-            let result = tetrahedral_interp(&clut.data, grid_size, [input[0], input[1], input[2]]);
-            result.to_vec()
-        } else {
-            let result = trilinear_interp(&clut.data, grid_size, [input[0], input[1], input[2]]);
-            result.to_vec()
+        // For 4-channel input (CMYK), use quadrilinear interpolation
+        if input.len() == 4 && clut.grid_points.len() >= 4 {
+            return self.apply_clut_4d(input, clut);
         }
+
+        // For other dimensions, fall back to nearest-neighbor
+        self.apply_clut_generic(input, clut)
+    }
+
+    /// Apply 4D CLUT interpolation (for CMYK)
+    fn apply_clut_4d(&self, input: &[f64], clut: &ClutData) -> Vec<f64> {
+        // Quadrilinear interpolation for 4D CLUT
+        let g0 = clut.grid_points[0];
+        let g1 = clut.grid_points[1];
+        let g2 = clut.grid_points[2];
+        let g3 = clut.grid_points[3];
+        let out_ch = clut.output_channels;
+
+        // Calculate positions and fractions for each dimension
+        let p0 = (input[0].clamp(0.0, 1.0) * (g0 - 1) as f64).min((g0 - 1) as f64);
+        let p1 = (input[1].clamp(0.0, 1.0) * (g1 - 1) as f64).min((g1 - 1) as f64);
+        let p2 = (input[2].clamp(0.0, 1.0) * (g2 - 1) as f64).min((g2 - 1) as f64);
+        let p3 = (input[3].clamp(0.0, 1.0) * (g3 - 1) as f64).min((g3 - 1) as f64);
+
+        let i0 = p0.floor() as usize;
+        let i1 = p1.floor() as usize;
+        let i2 = p2.floor() as usize;
+        let i3 = p3.floor() as usize;
+
+        let f0 = p0 - i0 as f64;
+        let f1 = p1 - i1 as f64;
+        let f2 = p2 - i2 as f64;
+        let f3 = p3 - i3 as f64;
+
+        // Clamp indices
+        let i0_1 = (i0 + 1).min(g0 - 1);
+        let i1_1 = (i1 + 1).min(g1 - 1);
+        let i2_1 = (i2 + 1).min(g2 - 1);
+        let i3_1 = (i3 + 1).min(g3 - 1);
+
+        // Calculate strides
+        let s3 = out_ch;
+        let s2 = s3 * g3;
+        let s1 = s2 * g2;
+        let s0 = s1 * g1;
+
+        // Index function
+        let idx = |c, m, y, k| c * s0 + m * s1 + y * s2 + k * s3;
+
+        // Interpolate in all 4 dimensions
+        let mut output = vec![0.0f64; out_ch];
+
+        for ch in 0..out_ch {
+            // 16 corner values
+            let v0000 = clut.data.get(idx(i0, i1, i2, i3) + ch).copied().unwrap_or(0.0);
+            let v0001 = clut.data.get(idx(i0, i1, i2, i3_1) + ch).copied().unwrap_or(0.0);
+            let v0010 = clut.data.get(idx(i0, i1, i2_1, i3) + ch).copied().unwrap_or(0.0);
+            let v0011 = clut.data.get(idx(i0, i1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
+            let v0100 = clut.data.get(idx(i0, i1_1, i2, i3) + ch).copied().unwrap_or(0.0);
+            let v0101 = clut.data.get(idx(i0, i1_1, i2, i3_1) + ch).copied().unwrap_or(0.0);
+            let v0110 = clut.data.get(idx(i0, i1_1, i2_1, i3) + ch).copied().unwrap_or(0.0);
+            let v0111 = clut.data.get(idx(i0, i1_1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
+            let v1000 = clut.data.get(idx(i0_1, i1, i2, i3) + ch).copied().unwrap_or(0.0);
+            let v1001 = clut.data.get(idx(i0_1, i1, i2, i3_1) + ch).copied().unwrap_or(0.0);
+            let v1010 = clut.data.get(idx(i0_1, i1, i2_1, i3) + ch).copied().unwrap_or(0.0);
+            let v1011 = clut.data.get(idx(i0_1, i1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
+            let v1100 = clut.data.get(idx(i0_1, i1_1, i2, i3) + ch).copied().unwrap_or(0.0);
+            let v1101 = clut.data.get(idx(i0_1, i1_1, i2, i3_1) + ch).copied().unwrap_or(0.0);
+            let v1110 = clut.data.get(idx(i0_1, i1_1, i2_1, i3) + ch).copied().unwrap_or(0.0);
+            let v1111 = clut.data.get(idx(i0_1, i1_1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
+
+            // Interpolate along dimension 3 (K)
+            let v000 = v0000 + f3 * (v0001 - v0000);
+            let v001 = v0010 + f3 * (v0011 - v0010);
+            let v010 = v0100 + f3 * (v0101 - v0100);
+            let v011 = v0110 + f3 * (v0111 - v0110);
+            let v100 = v1000 + f3 * (v1001 - v1000);
+            let v101 = v1010 + f3 * (v1011 - v1010);
+            let v110 = v1100 + f3 * (v1101 - v1100);
+            let v111 = v1110 + f3 * (v1111 - v1110);
+
+            // Interpolate along dimension 2 (Y)
+            let v00 = v000 + f2 * (v001 - v000);
+            let v01 = v010 + f2 * (v011 - v010);
+            let v10 = v100 + f2 * (v101 - v100);
+            let v11 = v110 + f2 * (v111 - v110);
+
+            // Interpolate along dimension 1 (M)
+            let v0 = v00 + f1 * (v01 - v00);
+            let v1 = v10 + f1 * (v11 - v10);
+
+            // Interpolate along dimension 0 (C)
+            output[ch] = v0 + f0 * (v1 - v0);
+        }
+
+        output
     }
 
     /// Generic CLUT interpolation for arbitrary dimensions

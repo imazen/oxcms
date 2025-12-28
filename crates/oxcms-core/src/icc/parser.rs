@@ -251,6 +251,75 @@ impl IccProfile {
         self.get_tag(TagSignature::A2B0).is_some() || self.get_tag(TagSignature::B2A0).is_some()
     }
 
+    /// Check if this is a CMYK profile
+    pub fn is_cmyk(&self) -> bool {
+        self.header.color_space == super::header::ColorSpace::Cmyk
+    }
+
+    /// Get the A2B0 tag (device to PCS, perceptual intent)
+    pub fn a2b0(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::A2B0)
+    }
+
+    /// Get the A2B1 tag (device to PCS, relative colorimetric intent)
+    pub fn a2b1(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::A2B1)
+    }
+
+    /// Get the A2B2 tag (device to PCS, saturation intent)
+    pub fn a2b2(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::A2B2)
+    }
+
+    /// Get the B2A0 tag (PCS to device, perceptual intent)
+    pub fn b2a0(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::B2A0)
+    }
+
+    /// Get the B2A1 tag (PCS to device, relative colorimetric intent)
+    pub fn b2a1(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::B2A1)
+    }
+
+    /// Get the B2A2 tag (PCS to device, saturation intent)
+    pub fn b2a2(&self) -> Option<&TagData> {
+        self.get_tag(TagSignature::B2A2)
+    }
+
+    /// Get the A2B tag for a specific rendering intent
+    pub fn a2b_for_intent(&self, intent: super::header::RenderingIntent) -> Option<&TagData> {
+        match intent {
+            super::header::RenderingIntent::Perceptual => self.a2b0(),
+            super::header::RenderingIntent::RelativeColorimetric
+            | super::header::RenderingIntent::AbsoluteColorimetric => {
+                self.a2b1().or_else(|| self.a2b0())
+            }
+            super::header::RenderingIntent::Saturation => self.a2b2().or_else(|| self.a2b0()),
+        }
+    }
+
+    /// Get the B2A tag for a specific rendering intent
+    pub fn b2a_for_intent(&self, intent: super::header::RenderingIntent) -> Option<&TagData> {
+        match intent {
+            super::header::RenderingIntent::Perceptual => self.b2a0(),
+            super::header::RenderingIntent::RelativeColorimetric
+            | super::header::RenderingIntent::AbsoluteColorimetric => {
+                self.b2a1().or_else(|| self.b2a0())
+            }
+            super::header::RenderingIntent::Saturation => self.b2a2().or_else(|| self.b2a0()),
+        }
+    }
+
+    /// Get the number of input channels for this profile
+    pub fn input_channels(&self) -> usize {
+        self.header.color_space.channels()
+    }
+
+    /// Get the number of output channels for PCS
+    pub fn pcs_channels(&self) -> usize {
+        self.header.pcs.channels()
+    }
+
     /// Get the raw profile data
     pub fn raw_data(&self) -> &[u8] {
         &self.raw_data

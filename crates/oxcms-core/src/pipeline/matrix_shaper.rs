@@ -15,7 +15,7 @@ use crate::icc::{IccError, IccProfile};
 use crate::math::{adaptation_matrix, Matrix3x3};
 
 use super::context::TransformContext;
-use super::stages::{TrcCurve, TrcStage};
+use super::stages::TrcStage;
 
 /// A matrix-shaper transform pipeline
 #[derive(Debug, Clone)]
@@ -271,6 +271,7 @@ impl MatrixShaperTransform {
 mod tests {
     use super::*;
     use crate::math::matrix::{SRGB_TO_XYZ, XYZ_TO_SRGB};
+    use crate::pipeline::stages::TrcCurve;
 
     #[test]
     fn test_srgb_identity_transform() {
