@@ -99,6 +99,67 @@ dst0[dst_cn.b_i() + dst_channels] =
 - Chrome's CMS, C++ with excellent security
 - Fuzzing-hardened profile parsing
 - HDR support (PQ, HLG)
+- **CRITICAL**: Uses inverted CMYK convention (Photoshop-style)
+
+## CMYK Convention Differences (2025-12-28)
+
+### skcms Inverts CMYK Values
+
+**Status**: Documented (not a bug - intentional design choice)
+
+skcms automatically inverts CMYK values, assuming Photoshop's "inverse CMYK" convention.
+From skcms.cc line 2820:
+```cpp
+// Photoshop creates CMYK images as inverse CMYK.
+// These happen to be the only ones we've _ever_ seen.
+add_op(Op::invert);
+```
+
+### Convention Comparison
+
+| CMS | CMYK Convention | Value 0 = | Value 255 = |
+|-----|-----------------|-----------|-------------|
+| moxcms | ICC Standard | No ink (white paper) | Full ink coverage |
+| lcms2 | ICC Standard | No ink (white paper) | Full ink coverage |
+| skcms | Photoshop | Full ink coverage | No ink (white paper) |
+
+### Test Results (Coated_FOGRA39_CMYK.icc)
+
+Grid test with 864 CMYK samples (C,M,Y: 0-255 step 51; K: 0-255 step 85):
+
+| Comparison | Max Diff | Avg Diff | Samples >5 | Samples >10 |
+|------------|----------|----------|------------|-------------|
+| moxcms vs lcms2 | 7 | 0.71 | 0% | 0% |
+| skcms vs lcms2 | **255** | 145 | 100% | 100% |
+| skcms (pre-inverted input) vs lcms2 | 13 | 1.43 | 1% | 0% |
+
+### Impact
+
+**The 255-point max difference with skcms is NOT a precision issue - it's a complete value inversion.**
+
+Example: CMYK `[0,0,0,0]` (white in ICC, full-ink in Photoshop)
+- moxcms → RGB `[255,255,255]` (correct white)
+- lcms2 → RGB `[255,255,255]` (correct white)
+- skcms → RGB `[0,0,1]` (nearly black - inverted interpretation)
+
+When inputs are pre-inverted to match skcms's expectation:
+- skcms `[255,255,255,255]` → RGB `[252,254,255]` (white, diff=3 from lcms2)
+
+### Implications for JPEG XL CMYK
+
+When libjxl decodes CMYK JXL images and uses skcms:
+1. JXL stores CMYK in ICC standard convention (0=no ink)
+2. skcms inverts values (assumes Photoshop convention)
+3. Result: Complete color inversion
+
+**Issue #2** ("CMYK→sRGB conversion produces different results than skcms/libjxl")
+is explained by this convention mismatch.
+
+### Recommendations
+
+For CMYK sources using ICC standard convention (JXL, TIFF, test profiles):
+- Use **lcms2** or **moxcms** (both follow ICC standard)
+- Or pre-invert CMYK values (`255 - value`) before passing to skcms
 
 ## Transform-Specific Notes
 
@@ -173,7 +234,7 @@ When a difference is found:
 Additional comparisons to implement:
 
 - [ ] Profile-to-profile transforms (P3, AdobeRGB, etc.)
-- [ ] CMYK transforms
+- [x] CMYK transforms (documented above - skcms uses inverted convention)
 - [ ] Lab/XYZ conversions
 - [ ] Different rendering intents with non-identity transforms
 - [ ] 16-bit precision
