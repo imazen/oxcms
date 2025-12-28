@@ -1325,14 +1325,11 @@ impl ColorProfile {
     }
 
     pub fn rgb_to_xyz_matrix(&self) -> Matrix3d {
-        let xyz_matrix = self.colorant_matrix();
-
-        // Use the native (implied) white point from colorant sum
-        // This handles V2 profiles with unadapted colorants correctly
-        let implied_wp = self.implied_white_point();
-
-        // Compute RGB->XYZ matrix so [1,1,1] maps to the implied white point
-        ColorProfile::rgb_to_xyz_d(xyz_matrix, implied_wp)
+        // ICC.1:2022-05 Section F.3 specifies the matrix model as:
+        //   connection = colorantMatrix × linear_rgb
+        // No white point scaling is specified. Use colorants directly.
+        // This matches skcms and lcms2 behavior.
+        self.colorant_matrix()
     }
 
     /// Computes transform matrix RGB -> XYZ -> RGB
