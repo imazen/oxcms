@@ -21,7 +21,7 @@
 //! Upstream issue should be filed at: https://github.com/awxkee/moxcms
 
 use cms_tests::accuracy::compare_rgb_buffers;
-use cms_tests::patterns::{TestPattern, generate_pattern, sizes};
+use cms_tests::patterns::{generate_pattern, sizes, TestPattern};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 
 /// Maximum acceptable deltaE for parity tests.
@@ -186,16 +186,30 @@ fn diagnose_arm64_differences() {
 
     for (i, (input_rgb, name)) in test_colors.iter().enumerate() {
         let idx = i * 3;
-        let mox = [moxcms_output[idx], moxcms_output[idx + 1], moxcms_output[idx + 2]];
-        let lcms = [lcms2_output[idx], lcms2_output[idx + 1], lcms2_output[idx + 2]];
+        let mox = [
+            moxcms_output[idx],
+            moxcms_output[idx + 1],
+            moxcms_output[idx + 2],
+        ];
+        let lcms = [
+            lcms2_output[idx],
+            lcms2_output[idx + 1],
+            lcms2_output[idx + 2],
+        ];
         let matches = mox == lcms;
 
         eprintln!(
             "{:11} | {:3},{:3},{:3} | {:3},{:3},{:3} | {:3},{:3},{:3} | {}",
             name,
-            input_rgb[0], input_rgb[1], input_rgb[2],
-            mox[0], mox[1], mox[2],
-            lcms[0], lcms[1], lcms[2],
+            input_rgb[0],
+            input_rgb[1],
+            input_rgb[2],
+            mox[0],
+            mox[1],
+            mox[2],
+            lcms[0],
+            lcms[1],
+            lcms[2],
             if matches { "✓" } else { "✗" }
         );
     }
@@ -203,8 +217,16 @@ fn diagnose_arm64_differences() {
     eprintln!("\nIdentity check (should output = input for sRGB->sRGB):");
     for (i, (input_rgb, name)) in test_colors.iter().enumerate() {
         let idx = i * 3;
-        let mox = [moxcms_output[idx], moxcms_output[idx + 1], moxcms_output[idx + 2]];
-        let lcms = [lcms2_output[idx], lcms2_output[idx + 1], lcms2_output[idx + 2]];
+        let mox = [
+            moxcms_output[idx],
+            moxcms_output[idx + 1],
+            moxcms_output[idx + 2],
+        ];
+        let lcms = [
+            lcms2_output[idx],
+            lcms2_output[idx + 1],
+            lcms2_output[idx + 2],
+        ];
 
         let mox_identity = mox == *input_rgb;
         let lcms_identity = lcms == *input_rgb;
@@ -212,7 +234,9 @@ fn diagnose_arm64_differences() {
         if !mox_identity || !lcms_identity {
             eprintln!(
                 "  {}: input={:?} moxcms={:?}({}) lcms2={:?}({})",
-                name, input_rgb, mox,
+                name,
+                input_rgb,
+                mox,
                 if mox_identity { "ok" } else { "WRONG" },
                 lcms,
                 if lcms_identity { "ok" } else { "WRONG" }
