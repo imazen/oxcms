@@ -7,6 +7,7 @@
 //! author states he targets ColorSync behavior.
 
 #![cfg(target_os = "macos")]
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use std::path::Path;
 use std::ptr;
