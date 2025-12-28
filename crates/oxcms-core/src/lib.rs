@@ -45,6 +45,12 @@
 //! This crate was developed with assistance from Claude (Anthropic).
 //! Not all code has been manually reviewed. Validate independently before production use.
 
+// Native oxcms modules (Phase 2 implementation)
+pub mod color;
+pub mod icc;
+pub mod math;
+
+// Legacy moxcms wrapper modules (Phase 1)
 pub mod error;
 pub mod profile;
 pub mod transform;
