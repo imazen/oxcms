@@ -36,7 +36,13 @@ unsafe extern "C" {
         options: CFDictionaryRef,
     ) -> bool;
     fn ColorSyncProfileCreateWithDisplayID(display_id: u32) -> ColorSyncProfileRef;
-    fn ColorSyncProfileCreateSRGB() -> ColorSyncProfileRef;
+    fn ColorSyncProfileCreateWithName(name: CFStringRef) -> ColorSyncProfileRef;
+}
+
+// ColorSync profile name constants
+#[link(name = "ColorSync", kind = "framework")]
+unsafe extern "C" {
+    static kColorSyncSRGBProfile: CFStringRef;
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -110,7 +116,7 @@ unsafe fn transform_colorsync(profile_path: &str, rgb: [u8; 3]) -> Option<[u8; 3
     }
 
     // Create sRGB destination profile
-    let dst_profile = ColorSyncProfileCreateSRGB();
+    let dst_profile = ColorSyncProfileCreateWithName(kColorSyncSRGBProfile);
     if dst_profile.is_null() {
         CFRelease(src_profile);
         return None;
