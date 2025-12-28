@@ -21,14 +21,15 @@
 //! - Use A2B/B2A lookup tables directly
 
 mod context;
+mod lut;
 mod matrix_shaper;
 mod stages;
 
 pub use context::{RenderIntent, TransformFlags, TransformContext};
+pub use lut::{LutPipeline, LutCurve, ClutData};
 pub use matrix_shaper::{MatrixShaperPipeline, MatrixShaperTransform};
 pub use stages::{PipelineStage, TrcStage, MatrixStage};
 
-use crate::color::Xyz;
 use crate::icc::{IccProfile, IccError};
 
 /// A complete color transform pipeline
@@ -36,10 +37,8 @@ use crate::icc::{IccProfile, IccError};
 pub enum Pipeline {
     /// Matrix-shaper pipeline (RGB profiles)
     MatrixShaper(MatrixShaperPipeline),
-    // /// LUT-based pipeline (CMYK, DeviceLink)
-    // Lut(LutPipeline),
-    // /// Gray profile pipeline
-    // Gray(GrayPipeline),
+    /// LUT-based pipeline (CMYK, DeviceLink)
+    Lut(LutPipeline),
 }
 
 impl Pipeline {
@@ -55,7 +54,8 @@ impl Pipeline {
             return Ok(Pipeline::MatrixShaper(pipeline));
         }
 
-        // TODO: Handle LUT-based profiles
+        // TODO: Handle LUT-based profiles - would need to get A2B/B2A tags
+        // and chain them together
         Err(IccError::Unsupported(
             "Only matrix-shaper profiles are supported currently".to_string(),
         ))
@@ -67,6 +67,7 @@ impl Pipeline {
     pub fn transform_rgb(&self, rgb: [f64; 3]) -> [f64; 3] {
         match self {
             Pipeline::MatrixShaper(p) => p.transform_rgb(rgb),
+            Pipeline::Lut(p) => p.transform_rgb(rgb),
         }
     }
 
@@ -74,6 +75,23 @@ impl Pipeline {
     pub fn transform_rgb8(&self, src: &[u8], dst: &mut [u8]) {
         match self {
             Pipeline::MatrixShaper(p) => p.transform_rgb8(src, dst),
+            Pipeline::Lut(p) => {
+                // LUT pipeline needs per-pixel transformation
+                assert!(src.len() % 3 == 0);
+                assert!(dst.len() >= src.len());
+
+                for (src_chunk, dst_chunk) in src.chunks_exact(3).zip(dst.chunks_exact_mut(3)) {
+                    let rgb = [
+                        src_chunk[0] as f64 / 255.0,
+                        src_chunk[1] as f64 / 255.0,
+                        src_chunk[2] as f64 / 255.0,
+                    ];
+                    let result = p.transform_rgb(rgb);
+                    dst_chunk[0] = (result[0].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                    dst_chunk[1] = (result[1].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                    dst_chunk[2] = (result[2].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                }
+            }
         }
     }
 
@@ -81,6 +99,22 @@ impl Pipeline {
     pub fn transform_rgb16(&self, src: &[u16], dst: &mut [u16]) {
         match self {
             Pipeline::MatrixShaper(p) => p.transform_rgb16(src, dst),
+            Pipeline::Lut(p) => {
+                assert!(src.len() % 3 == 0);
+                assert!(dst.len() >= src.len());
+
+                for (src_chunk, dst_chunk) in src.chunks_exact(3).zip(dst.chunks_exact_mut(3)) {
+                    let rgb = [
+                        src_chunk[0] as f64 / 65535.0,
+                        src_chunk[1] as f64 / 65535.0,
+                        src_chunk[2] as f64 / 65535.0,
+                    ];
+                    let result = p.transform_rgb(rgb);
+                    dst_chunk[0] = (result[0].clamp(0.0, 1.0) * 65535.0 + 0.5) as u16;
+                    dst_chunk[1] = (result[1].clamp(0.0, 1.0) * 65535.0 + 0.5) as u16;
+                    dst_chunk[2] = (result[2].clamp(0.0, 1.0) * 65535.0 + 0.5) as u16;
+                }
+            }
         }
     }
 
@@ -88,24 +122,29 @@ impl Pipeline {
     pub fn transform_rgba8(&self, src: &[u8], dst: &mut [u8]) {
         match self {
             Pipeline::MatrixShaper(p) => p.transform_rgba8(src, dst),
+            Pipeline::Lut(p) => {
+                assert!(src.len() % 4 == 0);
+                assert!(dst.len() >= src.len());
+
+                for (src_chunk, dst_chunk) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+                    let rgb = [
+                        src_chunk[0] as f64 / 255.0,
+                        src_chunk[1] as f64 / 255.0,
+                        src_chunk[2] as f64 / 255.0,
+                    ];
+                    let result = p.transform_rgb(rgb);
+                    dst_chunk[0] = (result[0].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                    dst_chunk[1] = (result[1].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                    dst_chunk[2] = (result[2].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+                    dst_chunk[3] = src_chunk[3]; // Preserve alpha
+                }
+            }
         }
-    }
-}
-
-/// Trait for pipeline stages
-pub trait Stage {
-    /// Apply the stage to an XYZ value
-    fn apply(&self, xyz: Xyz) -> Xyz;
-
-    /// Apply inverse (if applicable)
-    fn apply_inverse(&self, xyz: Xyz) -> Xyz {
-        xyz // Default: identity
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_pipeline_exists() {

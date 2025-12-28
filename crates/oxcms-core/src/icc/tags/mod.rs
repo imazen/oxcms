@@ -14,7 +14,7 @@ mod text;
 mod xyz;
 
 pub use curves::{CurveData, ParametricCurveData};
-pub use lut::{Lut16Data, Lut8Data, LutAToBData, LutBToAData};
+pub use lut::{CurveSegment, Lut16Data, Lut8Data, LutAToBData, LutBToAData, LutClut};
 pub use text::TextData;
 pub use xyz::XyzTagData;
 
