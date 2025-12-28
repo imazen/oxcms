@@ -21,7 +21,7 @@
 //! Upstream issue should be filed at: https://github.com/awxkee/moxcms
 
 use cms_tests::accuracy::compare_rgb_buffers;
-use cms_tests::patterns::{generate_pattern, sizes, TestPattern};
+use cms_tests::patterns::{TestPattern, generate_pattern, sizes};
 use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 
 /// Maximum acceptable deltaE for parity tests.
