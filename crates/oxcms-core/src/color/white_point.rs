@@ -17,11 +17,19 @@ pub struct WhitePoint {
 }
 
 impl WhitePoint {
-    /// Create a new white point
+    /// Create a new white point with a name
     pub const fn new(name: &'static str, x: f64, y: f64, z: f64) -> Self {
         Self {
             name,
             xyz: Xyz::new(x, y, z),
+        }
+    }
+
+    /// Create a white point from XYZ coordinates (unnamed)
+    pub fn from_xyz(xyz: Xyz) -> Self {
+        Self {
+            name: "custom",
+            xyz,
         }
     }
 

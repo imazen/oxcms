@@ -49,6 +49,7 @@
 pub mod color;
 pub mod icc;
 pub mod math;
+pub mod pipeline;
 
 // Legacy moxcms wrapper modules (Phase 1)
 pub mod error;
