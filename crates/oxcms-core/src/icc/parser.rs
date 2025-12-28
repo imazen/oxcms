@@ -211,6 +211,13 @@ impl IccProfile {
             .and_then(|xyz| xyz.to_xyz())
     }
 
+    /// Get media black point (bkpt tag)
+    pub fn media_black_point(&self) -> Option<crate::color::Xyz> {
+        self.get_tag(TagSignature::MEDIA_BLACK)
+            .and_then(|t| t.as_xyz())
+            .and_then(|xyz| xyz.to_xyz())
+    }
+
     /// Get red TRC (tone reproduction curve)
     pub fn red_trc(&self) -> Option<&super::tags::CurveData> {
         self.get_tag(TagSignature::RED_TRC)

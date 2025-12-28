@@ -20,11 +20,13 @@
 //! For LUT profiles:
 //! - Use A2B/B2A lookup tables directly
 
+mod bpc;
 mod context;
 mod lut;
 mod matrix_shaper;
 mod stages;
 
+pub use bpc::{BpcParams, detect_black_point};
 pub use context::{RenderIntent, TransformFlags, TransformContext};
 pub use lut::{LutPipeline, LutCurve, ClutData};
 pub use matrix_shaper::{MatrixShaperPipeline, MatrixShaperTransform};
