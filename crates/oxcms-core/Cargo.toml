@@ -13,6 +13,7 @@ categories = ["graphics", "multimedia::images"]
 thiserror.workspace = true
 bytemuck.workspace = true
 moxcms.workspace = true
+multiversion.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

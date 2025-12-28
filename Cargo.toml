@@ -44,6 +44,9 @@ rand_chacha = "0.3"
 # Async
 rayon = "1.10"
 
+# SIMD multiversioning
+multiversion = "0.7"
+
 [profile.release]
 lto = true
 codegen-units = 1
