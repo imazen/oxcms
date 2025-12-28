@@ -7,6 +7,11 @@
 //! Each difference should be investigated and either:
 //! 1. Fixed to match reference
 //! 2. Documented with justification for why we differ
+//!
+//! # Known Issue: ARM64 NEON Bug in moxcms
+//!
+//! See `lcms2_parity.rs` for details. The moxcms NEON fixed-point code has
+//! a bug that causes the blue channel of every second pixel to be wrong.
 
 use cms_tests::accuracy::{delta_e_2000, srgb_to_lab};
 use cms_tests::patterns::{TestPattern, generate_pattern};
@@ -14,11 +19,7 @@ use cms_tests::reference::{transform_lcms2_srgb, transform_moxcms_srgb};
 use std::collections::HashMap;
 
 /// Maximum acceptable deltaE for math difference tests.
-/// ARM64 has slightly different floating-point behavior.
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-const MATH_DIFF_DELTA_E_THRESHOLD: f64 = 1.5;
-
-#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+/// On ARM64, tests will fail due to upstream moxcms NEON bug (see module docs).
 const MATH_DIFF_DELTA_E_THRESHOLD: f64 = 1.0;
 
 /// Detailed difference record
