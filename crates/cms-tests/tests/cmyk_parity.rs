@@ -18,13 +18,12 @@ use std::slice;
 // ============================================================================
 
 /// Maximum allowed difference between lcms2 and moxcms for CMYK->RGB transforms.
-/// This accounts for implementation differences in gamut mapping and rounding.
-const CMYK_TO_RGB_PARITY_TOLERANCE: u16 = 10;
+/// Should be 1 (quantization only) for correct implementations.
+const CMYK_TO_RGB_PARITY_TOLERANCE: u16 = 1;
 
 /// Maximum allowed difference between lcms2 and moxcms for RGB->CMYK transforms.
-/// Higher than CMYK->RGB because RGB->CMYK involves more complex gamut mapping
-/// and black generation algorithms can differ between implementations.
-const RGB_TO_CMYK_PARITY_TOLERANCE: u16 = 10;
+/// Should be 1 (quantization only) for correct implementations.
+const RGB_TO_CMYK_PARITY_TOLERANCE: u16 = 1;
 
 /// Maximum allowed delta for CMYK->RGB->CMYK roundtrip.
 /// High tolerance because sRGB gamut is smaller than CMYK - out-of-gamut
@@ -557,19 +556,45 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
     let mut max_diff = 0u16;
     let mut total_diff = 0u64;
     let mut diff_count = 0u64;
+    let mut large_diffs = Vec::new();
 
     for i in 0..num_pixels {
-        let idx = i * 3;
+        let cmyk_idx = i * 4;
+        let rgb_idx = i * 3;
+        let cmyk = [
+            cmyk_pixels[cmyk_idx],
+            cmyk_pixels[cmyk_idx + 1],
+            cmyk_pixels[cmyk_idx + 2],
+            cmyk_pixels[cmyk_idx + 3],
+        ];
+        let lcms2_rgb = [
+            lcms2_result[rgb_idx],
+            lcms2_result[rgb_idx + 1],
+            lcms2_result[rgb_idx + 2],
+        ];
+        let moxcms_rgb = [
+            moxcms_result[rgb_idx],
+            moxcms_result[rgb_idx + 1],
+            moxcms_result[rgb_idx + 2],
+        ];
+
+        let mut pixel_max_diff = 0u16;
         for c in 0..3 {
-            let diff =
-                (lcms2_result[idx + c] as i16 - moxcms_result[idx + c] as i16).unsigned_abs();
+            let diff = (lcms2_rgb[c] as i16 - moxcms_rgb[c] as i16).unsigned_abs();
             if diff > 0 {
                 diff_count += 1;
                 total_diff += diff as u64;
                 if diff > max_diff {
                     max_diff = diff;
                 }
+                if diff > pixel_max_diff {
+                    pixel_max_diff = diff;
+                }
             }
+        }
+
+        if pixel_max_diff > 1 {
+            large_diffs.push((cmyk, lcms2_rgb, moxcms_rgb, pixel_max_diff));
         }
     }
 
@@ -586,6 +611,24 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
         diff_count,
         num_pixels * 3
     );
+
+    if !large_diffs.is_empty() {
+        println!("\nCases with diff > 1 ({} total):", large_diffs.len());
+        println!("{:<20} {:>15} {:>15} {:>6}", "CMYK", "lcms2 RGB", "moxcms RGB", "diff");
+        println!("{}", "-".repeat(60));
+        for (cmyk, lcms2_rgb, moxcms_rgb, diff) in large_diffs.iter().take(50) {
+            println!(
+                "[{:3},{:3},{:3},{:3}] [{:3},{:3},{:3}] [{:3},{:3},{:3}] {:>6}",
+                cmyk[0], cmyk[1], cmyk[2], cmyk[3],
+                lcms2_rgb[0], lcms2_rgb[1], lcms2_rgb[2],
+                moxcms_rgb[0], moxcms_rgb[1], moxcms_rgb[2],
+                diff
+            );
+        }
+        if large_diffs.len() > 50 {
+            println!("... and {} more", large_diffs.len() - 50);
+        }
+    }
 
     // Allow some difference due to implementation variations
     assert!(
@@ -617,6 +660,50 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
         transform_lcms2_rgb_to_cmyk(&profile_data, &rgb_pixels).expect("lcms2 RGB->CMYK failed");
     let moxcms_result =
         transform_moxcms_rgb_to_cmyk(&profile_data, &rgb_pixels).expect("moxcms RGB->CMYK failed");
+
+    // Detailed comparison
+    let num_pixels = rgb_pixels.len() / 3;
+    let mut large_diffs = Vec::new();
+    for i in 0..num_pixels {
+        let rgb_idx = i * 3;
+        let cmyk_idx = i * 4;
+        let rgb = [rgb_pixels[rgb_idx], rgb_pixels[rgb_idx + 1], rgb_pixels[rgb_idx + 2]];
+        let lcms2_cmyk = [
+            lcms2_result[cmyk_idx], lcms2_result[cmyk_idx + 1],
+            lcms2_result[cmyk_idx + 2], lcms2_result[cmyk_idx + 3],
+        ];
+        let moxcms_cmyk = [
+            moxcms_result[cmyk_idx], moxcms_result[cmyk_idx + 1],
+            moxcms_result[cmyk_idx + 2], moxcms_result[cmyk_idx + 3],
+        ];
+        let mut pixel_max_diff = 0u16;
+        for c in 0..4 {
+            let diff = (lcms2_cmyk[c] as i16 - moxcms_cmyk[c] as i16).unsigned_abs();
+            if diff > pixel_max_diff {
+                pixel_max_diff = diff;
+            }
+        }
+        if pixel_max_diff > 1 {
+            large_diffs.push((rgb, lcms2_cmyk, moxcms_cmyk, pixel_max_diff));
+        }
+    }
+    if !large_diffs.is_empty() {
+        println!("\nRGB->CMYK cases with diff > 1 ({} total):", large_diffs.len());
+        println!("{:<15} {:>20} {:>20} {:>6}", "RGB", "lcms2 CMYK", "moxcms CMYK", "diff");
+        println!("{}", "-".repeat(65));
+        for (rgb, lcms2_cmyk, moxcms_cmyk, diff) in large_diffs.iter().take(50) {
+            println!(
+                "[{:3},{:3},{:3}] [{:3},{:3},{:3},{:3}] [{:3},{:3},{:3},{:3}] {:>6}",
+                rgb[0], rgb[1], rgb[2],
+                lcms2_cmyk[0], lcms2_cmyk[1], lcms2_cmyk[2], lcms2_cmyk[3],
+                moxcms_cmyk[0], moxcms_cmyk[1], moxcms_cmyk[2], moxcms_cmyk[3],
+                diff
+            );
+        }
+        if large_diffs.len() > 50 {
+            println!("... and {} more", large_diffs.len() - 50);
+        }
+    }
 
     // Compare outputs
     let num_pixels = rgb_pixels.len() / 3;

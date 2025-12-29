@@ -7,16 +7,54 @@ This document tracks all failing tests, their root cause, and remediation plan.
 | Category | Count | Blocking Release |
 |----------|-------|------------------|
 | Critical | 0 | Yes |
-| High | 0 | Yes |
+| High | 1 | Yes |
 | Medium | 0 | No |
 | Low | 0 | No |
-| **Total** | **0** | - |
+| **Total** | **1** | - |
 
 ---
 
 ## Critical Failures
 
 *Tests that produce completely wrong output or crash.*
+
+(None)
+
+---
+
+## High Priority Failures
+
+*Tests that affect common workflows but don't crash.*
+
+### [CMYK-001] CMYK LUT interpolation differs from lcms2
+
+**Source**: moxcms vs lcms2
+**File**: `tests/cmyk_parity.rs`
+**Status**: 🔴 Failing
+
+**Description**:
+CMYK transforms using LUT-based profiles (Coated_FOGRA39) produce different results than lcms2.
+
+**Observed**:
+- CMYK→RGB: max_diff=7, 32 cases >1 diff
+- RGB→CMYK: max_diff=4, 343 cases >1 diff
+
+**Pattern**:
+- Worst case: Pure yellow [0,0,192,0] → green channel differs by 7
+- Yellow axis with K=0 shows scaling error in green channel
+- Suggests LUT interpolation or colorant handling difference
+
+**Root Cause**: Unknown - likely LUT interpolation method (tetrahedral vs trilinear) or boundary handling.
+
+**Fix Plan**:
+1. Compare LUT interpolation code between moxcms and lcms2
+2. Check if moxcms uses different grid point handling
+3. Test with simpler CMYK profile to isolate
+
+**Assigned**: Unassigned
+**Target**: TBD
+
+---
 
 ### Template
 ```markdown
