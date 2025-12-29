@@ -10,9 +10,9 @@
 //!
 //! Source RGB → TRC decode → Matrix to XYZ → [Chromatic adaptation] → Matrix from XYZ → TRC encode → Dest RGB
 
-use crate::color::{white_point::D50, WhitePoint};
+use crate::color::{WhitePoint, white_point::D50};
 use crate::icc::{IccError, IccProfile};
-use crate::math::{adaptation_matrix, Matrix3x3};
+use crate::math::{Matrix3x3, adaptation_matrix};
 
 use super::context::TransformContext;
 use super::stages::TrcStage;
@@ -48,22 +48,14 @@ impl MatrixShaperPipeline {
         let dst_matrix = Self::extract_colorant_matrix(dst)?;
 
         // Invert destination matrix (XYZ → RGB)
-        let dst_matrix_inv = dst_matrix.inverse().ok_or_else(|| {
-            IccError::CorruptedData("Destination matrix is singular".to_string())
-        })?;
+        let dst_matrix_inv = dst_matrix
+            .inverse()
+            .ok_or_else(|| IccError::CorruptedData("Destination matrix is singular".to_string()))?;
 
         // Get TRCs
-        let src_trc = TrcStage::from_curves(
-            src.red_trc(),
-            src.green_trc(),
-            src.blue_trc(),
-        );
+        let src_trc = TrcStage::from_curves(src.red_trc(), src.green_trc(), src.blue_trc());
 
-        let dst_trc = TrcStage::from_curves(
-            dst.red_trc(),
-            dst.green_trc(),
-            dst.blue_trc(),
-        );
+        let dst_trc = TrcStage::from_curves(dst.red_trc(), dst.green_trc(), dst.blue_trc());
 
         // Check if chromatic adaptation is needed
         let src_white = src.media_white_point().unwrap_or(D50.xyz);
@@ -90,15 +82,15 @@ impl MatrixShaperPipeline {
 
     /// Extract the colorant matrix from a profile
     fn extract_colorant_matrix(profile: &IccProfile) -> Result<Matrix3x3, IccError> {
-        let red = profile.red_colorant().ok_or_else(|| {
-            IccError::MissingTag(u32::from_be_bytes(*b"rXYZ"))
-        })?;
-        let green = profile.green_colorant().ok_or_else(|| {
-            IccError::MissingTag(u32::from_be_bytes(*b"gXYZ"))
-        })?;
-        let blue = profile.blue_colorant().ok_or_else(|| {
-            IccError::MissingTag(u32::from_be_bytes(*b"bXYZ"))
-        })?;
+        let red = profile
+            .red_colorant()
+            .ok_or_else(|| IccError::MissingTag(u32::from_be_bytes(*b"rXYZ")))?;
+        let green = profile
+            .green_colorant()
+            .ok_or_else(|| IccError::MissingTag(u32::from_be_bytes(*b"gXYZ")))?;
+        let blue = profile
+            .blue_colorant()
+            .ok_or_else(|| IccError::MissingTag(u32::from_be_bytes(*b"bXYZ")))?;
 
         // Build matrix with colorants as columns
         Ok(Matrix3x3::new([
@@ -296,21 +288,9 @@ mod tests {
         // White should stay white
         let white = [1.0, 1.0, 1.0];
         let result = pipeline.transform_rgb(white);
-        assert!(
-            (result[0] - 1.0).abs() < 0.001,
-            "White R: {}",
-            result[0]
-        );
-        assert!(
-            (result[1] - 1.0).abs() < 0.001,
-            "White G: {}",
-            result[1]
-        );
-        assert!(
-            (result[2] - 1.0).abs() < 0.001,
-            "White B: {}",
-            result[2]
-        );
+        assert!((result[0] - 1.0).abs() < 0.001, "White R: {}", result[0]);
+        assert!((result[1] - 1.0).abs() < 0.001, "White G: {}", result[1]);
+        assert!((result[2] - 1.0).abs() < 0.001, "White B: {}", result[2]);
 
         // Black should stay black
         let black = [0.0, 0.0, 0.0];
@@ -322,21 +302,9 @@ mod tests {
         // Mid-gray should stay approximately the same
         let gray = [0.5, 0.5, 0.5];
         let result = pipeline.transform_rgb(gray);
-        assert!(
-            (result[0] - 0.5).abs() < 0.01,
-            "Gray R: {}",
-            result[0]
-        );
-        assert!(
-            (result[1] - 0.5).abs() < 0.01,
-            "Gray G: {}",
-            result[1]
-        );
-        assert!(
-            (result[2] - 0.5).abs() < 0.01,
-            "Gray B: {}",
-            result[2]
-        );
+        assert!((result[0] - 0.5).abs() < 0.01, "Gray R: {}", result[0]);
+        assert!((result[1] - 0.5).abs() < 0.01, "Gray G: {}", result[1]);
+        assert!((result[2] - 0.5).abs() < 0.01, "Gray B: {}", result[2]);
     }
 
     #[test]

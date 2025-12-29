@@ -614,14 +614,24 @@ fn test_cmyk_to_rgb_parity_lcms2_moxcms() {
 
     if !large_diffs.is_empty() {
         println!("\nCases with diff > 1 ({} total):", large_diffs.len());
-        println!("{:<20} {:>15} {:>15} {:>6}", "CMYK", "lcms2 RGB", "moxcms RGB", "diff");
+        println!(
+            "{:<20} {:>15} {:>15} {:>6}",
+            "CMYK", "lcms2 RGB", "moxcms RGB", "diff"
+        );
         println!("{}", "-".repeat(60));
         for (cmyk, lcms2_rgb, moxcms_rgb, diff) in large_diffs.iter().take(50) {
             println!(
                 "[{:3},{:3},{:3},{:3}] [{:3},{:3},{:3}] [{:3},{:3},{:3}] {:>6}",
-                cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-                lcms2_rgb[0], lcms2_rgb[1], lcms2_rgb[2],
-                moxcms_rgb[0], moxcms_rgb[1], moxcms_rgb[2],
+                cmyk[0],
+                cmyk[1],
+                cmyk[2],
+                cmyk[3],
+                lcms2_rgb[0],
+                lcms2_rgb[1],
+                lcms2_rgb[2],
+                moxcms_rgb[0],
+                moxcms_rgb[1],
+                moxcms_rgb[2],
                 diff
             );
         }
@@ -667,14 +677,22 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
     for i in 0..num_pixels {
         let rgb_idx = i * 3;
         let cmyk_idx = i * 4;
-        let rgb = [rgb_pixels[rgb_idx], rgb_pixels[rgb_idx + 1], rgb_pixels[rgb_idx + 2]];
+        let rgb = [
+            rgb_pixels[rgb_idx],
+            rgb_pixels[rgb_idx + 1],
+            rgb_pixels[rgb_idx + 2],
+        ];
         let lcms2_cmyk = [
-            lcms2_result[cmyk_idx], lcms2_result[cmyk_idx + 1],
-            lcms2_result[cmyk_idx + 2], lcms2_result[cmyk_idx + 3],
+            lcms2_result[cmyk_idx],
+            lcms2_result[cmyk_idx + 1],
+            lcms2_result[cmyk_idx + 2],
+            lcms2_result[cmyk_idx + 3],
         ];
         let moxcms_cmyk = [
-            moxcms_result[cmyk_idx], moxcms_result[cmyk_idx + 1],
-            moxcms_result[cmyk_idx + 2], moxcms_result[cmyk_idx + 3],
+            moxcms_result[cmyk_idx],
+            moxcms_result[cmyk_idx + 1],
+            moxcms_result[cmyk_idx + 2],
+            moxcms_result[cmyk_idx + 3],
         ];
         let mut pixel_max_diff = 0u16;
         for c in 0..4 {
@@ -688,15 +706,29 @@ fn test_rgb_to_cmyk_parity_lcms2_moxcms() {
         }
     }
     if !large_diffs.is_empty() {
-        println!("\nRGB->CMYK cases with diff > 1 ({} total):", large_diffs.len());
-        println!("{:<15} {:>20} {:>20} {:>6}", "RGB", "lcms2 CMYK", "moxcms CMYK", "diff");
+        println!(
+            "\nRGB->CMYK cases with diff > 1 ({} total):",
+            large_diffs.len()
+        );
+        println!(
+            "{:<15} {:>20} {:>20} {:>6}",
+            "RGB", "lcms2 CMYK", "moxcms CMYK", "diff"
+        );
         println!("{}", "-".repeat(65));
         for (rgb, lcms2_cmyk, moxcms_cmyk, diff) in large_diffs.iter().take(50) {
             println!(
                 "[{:3},{:3},{:3}] [{:3},{:3},{:3},{:3}] [{:3},{:3},{:3},{:3}] {:>6}",
-                rgb[0], rgb[1], rgb[2],
-                lcms2_cmyk[0], lcms2_cmyk[1], lcms2_cmyk[2], lcms2_cmyk[3],
-                moxcms_cmyk[0], moxcms_cmyk[1], moxcms_cmyk[2], moxcms_cmyk[3],
+                rgb[0],
+                rgb[1],
+                rgb[2],
+                lcms2_cmyk[0],
+                lcms2_cmyk[1],
+                lcms2_cmyk[2],
+                lcms2_cmyk[3],
+                moxcms_cmyk[0],
+                moxcms_cmyk[1],
+                moxcms_cmyk[2],
+                moxcms_cmyk[3],
                 diff
             );
         }
@@ -790,5 +822,170 @@ fn test_cmyk_parity_all_profiles() {
         }
 
         println!("  {}: max_diff={}", name, max_diff);
+    }
+}
+
+/// Test pure yellow axis values across lcms2, moxcms, and skcms
+///
+/// These are the specific failing cases from CMYK-001:
+/// - [0,0,64,0], [0,0,128,0], [0,0,192,0]
+#[test]
+fn test_pure_yellow_axis_cross_cms() {
+    println!("\n=== Pure Yellow Axis: Cross-CMS Comparison ===\n");
+
+    let profile_data = load_profile_data(PRIMARY_CMYK_PROFILE);
+
+    // The failing pure yellow cases (C=0, M=0, K=0, Y varies)
+    let yellow_values: Vec<[u8; 4]> = vec![
+        [0, 0, 0, 0],   // White (baseline)
+        [0, 0, 32, 0],  // Light yellow
+        [0, 0, 64, 0],  // Failing case
+        [0, 0, 96, 0],
+        [0, 0, 128, 0], // Failing case
+        [0, 0, 160, 0],
+        [0, 0, 192, 0], // Failing case (worst: diff 7)
+        [0, 0, 224, 0],
+        [0, 0, 255, 0], // Pure yellow
+    ];
+
+    println!(
+        "{:<15} {:>12} {:>12} {:>12} {:>12} {:>6} {:>6} {:>6}",
+        "CMYK", "lcms2", "mox(def)", "mox(tet)", "skcms", "Δdef", "Δtet", "Δskcms"
+    );
+    println!("{}", "-".repeat(95));
+
+    for cmyk in &yellow_values {
+        // lcms2
+        let lcms2_rgb = transform_lcms2_single(&profile_data, *cmyk);
+
+        // moxcms with default (trilinear) interpolation
+        let moxcms_default_rgb = transform_moxcms_single_default(&profile_data, *cmyk);
+
+        // moxcms with tetrahedral interpolation
+        let moxcms_tet_rgb = transform_moxcms_single(&profile_data, *cmyk);
+
+        // skcms (with inverted input to match ICC convention)
+        let skcms_rgb = transform_skcms_inverted(&profile_data, *cmyk);
+
+        let fmt_rgb = |rgb: Option<[u8; 3]>| match rgb {
+            Some([r, g, b]) => format!("{:3},{:3},{:3}", r, g, b),
+            None => "FAIL".to_string(),
+        };
+
+        let calc_diff = |a: Option<[u8; 3]>, b: Option<[u8; 3]>| -> i16 {
+            match (a, b) {
+                (Some(a), Some(b)) => {
+                    (0..3).map(|i| (a[i] as i16 - b[i] as i16).abs()).max().unwrap_or(0)
+                }
+                _ => -1,
+            }
+        };
+
+        let diff_default = calc_diff(moxcms_default_rgb, lcms2_rgb);
+        let diff_tet = calc_diff(moxcms_tet_rgb, lcms2_rgb);
+        let diff_skcms = calc_diff(skcms_rgb, lcms2_rgb);
+
+        println!(
+            "[{:3},{:3},{:3},{:3}] {:>12} {:>12} {:>12} {:>12} {:>6} {:>6} {:>6}",
+            cmyk[0],
+            cmyk[1],
+            cmyk[2],
+            cmyk[3],
+            fmt_rgb(lcms2_rgb),
+            fmt_rgb(moxcms_default_rgb),
+            fmt_rgb(moxcms_tet_rgb),
+            fmt_rgb(skcms_rgb),
+            diff_default,
+            diff_tet,
+            diff_skcms,
+        );
+    }
+
+    println!("\nNote: skcms uses inverted CMYK (Photoshop convention), so inputs are pre-inverted.");
+    println!("Δ columns show max channel difference vs lcms2.");
+}
+
+/// Transform single CMYK pixel with lcms2
+fn transform_lcms2_single(profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
+    let cmyk_profile = Profile::new_icc(profile_data).ok()?;
+    let srgb = Profile::new_srgb();
+
+    let transform = lcms2::Transform::<[u8; 4], [u8; 3]>::new(
+        &cmyk_profile,
+        PixelFormat::CMYK_8,
+        &srgb,
+        PixelFormat::RGB_8,
+        Intent::Perceptual,
+    )
+    .ok()?;
+
+    let mut rgb = [0u8; 3];
+    transform.transform_pixels(slice::from_ref(&cmyk), slice::from_mut(&mut rgb));
+    Some(rgb)
+}
+
+/// Transform single CMYK pixel with moxcms (using default/trilinear interpolation)
+fn transform_moxcms_single_default(profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
+    use moxcms::{ColorProfile, Layout, TransformOptions};
+
+    let cmyk_profile = ColorProfile::new_from_slice(profile_data).ok()?;
+    let srgb = ColorProfile::new_srgb();
+
+    let transform = cmyk_profile
+        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .ok()?;
+
+    let mut rgb = [0u8; 3];
+    transform.transform(&cmyk, &mut rgb).ok()?;
+    Some(rgb)
+}
+
+/// Transform single CMYK pixel with moxcms (using tetrahedral interpolation)
+fn transform_moxcms_single(profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
+    use moxcms::{ColorProfile, InterpolationMethod, Layout, TransformOptions};
+
+    let cmyk_profile = ColorProfile::new_from_slice(profile_data).ok()?;
+    let srgb = ColorProfile::new_srgb();
+
+    let options = TransformOptions {
+        interpolation_method: InterpolationMethod::Tetrahedral,
+        ..TransformOptions::default()
+    };
+
+    let transform = cmyk_profile
+        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, options)
+        .ok()?;
+
+    let mut rgb = [0u8; 3];
+    transform.transform(&cmyk, &mut rgb).ok()?;
+    Some(rgb)
+}
+
+/// Transform single CMYK pixel with skcms (pre-inverting for ICC convention)
+fn transform_skcms_inverted(profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
+    let cmyk_profile = skcms_sys::parse_icc_profile(profile_data)?;
+
+    // skcms expects Photoshop convention (inverted), so invert ICC convention values
+    let inverted = [255 - cmyk[0], 255 - cmyk[1], 255 - cmyk[2], 255 - cmyk[3]];
+
+    let srgb = skcms_sys::srgb_profile();
+
+    let mut rgba_out = [0u8; 4];
+    let success = skcms_sys::transform(
+        &inverted,
+        skcms_sys::skcms_PixelFormat::RGBA_8888,
+        skcms_sys::skcms_AlphaFormat::Unpremul,
+        &cmyk_profile,
+        &mut rgba_out,
+        skcms_sys::skcms_PixelFormat::RGB_888,
+        skcms_sys::skcms_AlphaFormat::Opaque,
+        srgb,
+        1,
+    );
+
+    if success {
+        Some([rgba_out[0], rgba_out[1], rgba_out[2]])
+    } else {
+        None
     }
 }

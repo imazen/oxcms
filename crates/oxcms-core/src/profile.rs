@@ -3,7 +3,9 @@
 //! This module provides ICC profile parsing and manipulation.
 //! It wraps moxcms::ColorProfile with additional validation.
 
-use crate::types::{ColorSpace, Matrix3x3, ProfileClass, ProfileVersion, RenderingIntent, XyzColor};
+use crate::types::{
+    ColorSpace, Matrix3x3, ProfileClass, ProfileVersion, RenderingIntent, XyzColor,
+};
 use crate::{Error, Result};
 
 /// ICC Color Profile

@@ -11,10 +11,12 @@ pub mod gamma;
 pub mod interpolation;
 pub mod matrix;
 
-pub use chromatic_adaptation::{adapt_xyz, adaptation_matrix, bradford_matrix, ChromaticAdaptationMethod};
+pub use chromatic_adaptation::{
+    ChromaticAdaptationMethod, adapt_xyz, adaptation_matrix, bradford_matrix,
+};
 pub use gamma::{
-    parametric_curve_eval, srgb_gamma_decode, srgb_gamma_encode, ParametricCurve,
-    ParametricCurveType,
+    ParametricCurve, ParametricCurveType, parametric_curve_eval, srgb_gamma_decode,
+    srgb_gamma_encode,
 };
 pub use interpolation::{lerp, tetrahedral_interp, trilinear_interp};
 pub use matrix::Matrix3x3;

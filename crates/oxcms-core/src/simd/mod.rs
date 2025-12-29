@@ -17,8 +17,8 @@ mod gamma;
 mod matrix;
 
 pub use batch::{
-    clamp_rgb_batch, f64_to_rgb8_batch, rgb8_to_f64_batch, transform_rgb16_batch,
-    transform_rgb8_batch,
+    clamp_rgb_batch, f64_to_rgb8_batch, rgb8_to_f64_batch, transform_rgb8_batch,
+    transform_rgb16_batch,
 };
 pub use gamma::{
     apply_gamma_batch, apply_lut1d_batch, apply_srgb_decode_batch, apply_srgb_encode_batch,

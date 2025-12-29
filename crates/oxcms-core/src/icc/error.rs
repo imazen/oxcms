@@ -7,10 +7,7 @@ use std::fmt;
 #[non_exhaustive]
 pub enum IccError {
     /// Profile data is too small
-    TooSmall {
-        expected: usize,
-        actual: usize,
-    },
+    TooSmall { expected: usize, actual: usize },
     /// Invalid profile signature (should be 'acsp')
     InvalidSignature(u32),
     /// Profile size in header doesn't match data
@@ -26,10 +23,7 @@ pub enum IccError {
         profile_size: usize,
     },
     /// Invalid tag type signature
-    InvalidTagType {
-        tag: u32,
-        type_sig: u32,
-    },
+    InvalidTagType { tag: u32, type_sig: u32 },
     /// Required tag is missing
     MissingTag(u32),
     /// Invalid color space
@@ -39,10 +33,7 @@ pub enum IccError {
     /// Invalid rendering intent
     InvalidRenderingIntent(u32),
     /// Unsupported profile version
-    UnsupportedVersion {
-        major: u8,
-        minor: u8,
-    },
+    UnsupportedVersion { major: u8, minor: u8 },
     /// Corrupted or invalid data
     CorruptedData(String),
     /// Unsupported feature
@@ -53,18 +44,40 @@ impl fmt::Display for IccError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TooSmall { expected, actual } => {
-                write!(f, "Profile too small: expected {} bytes, got {}", expected, actual)
+                write!(
+                    f,
+                    "Profile too small: expected {} bytes, got {}",
+                    expected, actual
+                )
             }
             Self::InvalidSignature(sig) => {
-                write!(f, "Invalid profile signature: 0x{:08X} (expected 'acsp')", sig)
+                write!(
+                    f,
+                    "Invalid profile signature: 0x{:08X} (expected 'acsp')",
+                    sig
+                )
             }
-            Self::SizeMismatch { header_size, actual_size } => {
-                write!(f, "Size mismatch: header says {} bytes, data is {} bytes",
-                       header_size, actual_size)
+            Self::SizeMismatch {
+                header_size,
+                actual_size,
+            } => {
+                write!(
+                    f,
+                    "Size mismatch: header says {} bytes, data is {} bytes",
+                    header_size, actual_size
+                )
             }
-            Self::TagOutOfBounds { tag, offset, size, profile_size } => {
-                write!(f, "Tag '{:08X}' out of bounds: offset {} + size {} > profile size {}",
-                       tag, offset, size, profile_size)
+            Self::TagOutOfBounds {
+                tag,
+                offset,
+                size,
+                profile_size,
+            } => {
+                write!(
+                    f,
+                    "Tag '{:08X}' out of bounds: offset {} + size {} > profile size {}",
+                    tag, offset, size, profile_size
+                )
             }
             Self::InvalidTagType { tag, type_sig } => {
                 write!(f, "Invalid type '{:08X}' for tag '{:08X}'", type_sig, tag)

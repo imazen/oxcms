@@ -16,7 +16,11 @@ pub fn lerp(a: f64, b: f64, t: f64) -> f64 {
 /// Linear interpolation for 3-component vectors
 #[inline]
 pub fn lerp3(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    [
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+    ]
 }
 
 /// Bilinear interpolation in a 2D grid
@@ -204,10 +208,7 @@ pub fn tetrahedral_interp(lut: &[f64], grid_size: usize, input: [f64; 3]) -> [f6
             }
         } else {
             // fb > fg > fr: tetrahedron (000, 001, 011, 111)
-            c000[c]
-                + fb * (c001[c] - c000[c])
-                + fg * (c011[c] - c001[c])
-                + fr * (c111[c] - c011[c])
+            c000[c] + fb * (c001[c] - c000[c]) + fg * (c011[c] - c001[c]) + fr * (c111[c] - c011[c])
         };
     }
 

@@ -226,12 +226,7 @@ fn transform_skcms(cmyk_profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
 /// This tests whether pre-inverting CMYK values makes skcms match lcms2/moxcms
 fn transform_skcms_with_inverted_input(cmyk_profile_data: &[u8], cmyk: [u8; 4]) -> Option<[u8; 3]> {
     // Pre-invert the CMYK values (convert from ICC convention to Photoshop convention)
-    let inverted_cmyk = [
-        255 - cmyk[0],
-        255 - cmyk[1],
-        255 - cmyk[2],
-        255 - cmyk[3],
-    ];
+    let inverted_cmyk = [255 - cmyk[0], 255 - cmyk[1], 255 - cmyk[2], 255 - cmyk[3]];
     transform_skcms(cmyk_profile_data, inverted_cmyk)
 }
 
@@ -244,22 +239,30 @@ fn test_cmyk_cross_cms_comparison() {
     let fogra39_path = profiles_dir.join("skcms/misc/Coated_FOGRA39_CMYK.icc");
 
     if !fogra39_path.exists() {
-        eprintln!("SKIP: Coated_FOGRA39_CMYK.icc not found at {:?}", fogra39_path);
+        eprintln!(
+            "SKIP: Coated_FOGRA39_CMYK.icc not found at {:?}",
+            fogra39_path
+        );
         return;
     }
 
     let profile_data = std::fs::read(&fogra39_path).unwrap();
-    eprintln!("Using profile: Coated_FOGRA39_CMYK.icc ({} bytes)", profile_data.len());
+    eprintln!(
+        "Using profile: Coated_FOGRA39_CMYK.icc ({} bytes)",
+        profile_data.len()
+    );
 
     // Verify profile can be loaded by each CMS
     let moxcms_ok = moxcms::ColorProfile::new_from_slice(&profile_data).is_ok();
     let lcms2_ok = lcms2::Profile::new_icc(&profile_data).is_ok();
     let skcms_ok = skcms_sys::parse_icc_profile(&profile_data).is_some();
 
-    eprintln!("Profile loading: moxcms={} lcms2={} skcms={}",
+    eprintln!(
+        "Profile loading: moxcms={} lcms2={} skcms={}",
         if moxcms_ok { "✓" } else { "✗" },
         if lcms2_ok { "✓" } else { "✗" },
-        if skcms_ok { "✓" } else { "✗" });
+        if skcms_ok { "✓" } else { "✗" }
+    );
 
     if !moxcms_ok || !lcms2_ok || !skcms_ok {
         eprintln!("SKIP: Not all CMS libraries could load the profile");
@@ -268,8 +271,10 @@ fn test_cmyk_cross_cms_comparison() {
 
     let test_values = get_test_values();
 
-    eprintln!("\n{:<25} {:>15} {:>15} {:>15} {:>15} {:>10} {:>10}",
-        "Test Value", "moxcms", "lcms2", "skcms", "skcms(inv)", "mox-lcms", "skcms-lcms");
+    eprintln!(
+        "\n{:<25} {:>15} {:>15} {:>15} {:>15} {:>10} {:>10}",
+        "Test Value", "moxcms", "lcms2", "skcms", "skcms(inv)", "mox-lcms", "skcms-lcms"
+    );
     eprintln!("{}", "-".repeat(115));
 
     let mut max_mox_lcms = 0i32;
@@ -299,26 +304,39 @@ fn test_cmyk_cross_cms_comparison() {
             _ => -1,
         };
 
-        if mox_lcms > max_mox_lcms { max_mox_lcms = mox_lcms; }
-        if skcms_lcms > max_skcms_lcms { max_skcms_lcms = skcms_lcms; }
-        if skcms_inv_lcms > max_skcms_inv_lcms { max_skcms_inv_lcms = skcms_inv_lcms; }
+        if mox_lcms > max_mox_lcms {
+            max_mox_lcms = mox_lcms;
+        }
+        if skcms_lcms > max_skcms_lcms {
+            max_skcms_lcms = skcms_lcms;
+        }
+        if skcms_inv_lcms > max_skcms_inv_lcms {
+            max_skcms_inv_lcms = skcms_inv_lcms;
+        }
 
         // Format output
-        let fmt_rgb = |rgb: &Option<[u8; 3]>| {
-            match rgb {
-                Some([r, g, b]) => format!("{:3},{:3},{:3}", r, g, b),
-                None => "  FAILED  ".to_string(),
-            }
+        let fmt_rgb = |rgb: &Option<[u8; 3]>| match rgb {
+            Some([r, g, b]) => format!("{:3},{:3},{:3}", r, g, b),
+            None => "  FAILED  ".to_string(),
         };
 
-        eprintln!("{:<25} {:>15} {:>15} {:>15} {:>15} {:>10} {:>10}",
+        eprintln!(
+            "{:<25} {:>15} {:>15} {:>15} {:>15} {:>10} {:>10}",
             test.name,
             fmt_rgb(&results.moxcms),
             fmt_rgb(&results.lcms2),
             fmt_rgb(&results.skcms),
             fmt_rgb(&results.skcms_inverted_input),
-            if mox_lcms >= 0 { format!("{}", mox_lcms) } else { "N/A".to_string() },
-            if skcms_lcms >= 0 { format!("{}", skcms_lcms) } else { "N/A".to_string() },
+            if mox_lcms >= 0 {
+                format!("{}", mox_lcms)
+            } else {
+                "N/A".to_string()
+            },
+            if skcms_lcms >= 0 {
+                format!("{}", skcms_lcms)
+            } else {
+                "N/A".to_string()
+            },
         );
 
         results_list.push((test.clone(), results));
@@ -333,8 +351,10 @@ fn test_cmyk_cross_cms_comparison() {
     eprintln!("\n=== Analysis ===");
     eprintln!("skcms automatically inverts CMYK values (Photoshop convention).");
     if max_skcms_inv_lcms < max_skcms_lcms {
-        eprintln!("Pre-inverting input reduces skcms/lcms2 difference from {} to {}",
-            max_skcms_lcms, max_skcms_inv_lcms);
+        eprintln!(
+            "Pre-inverting input reduces skcms/lcms2 difference from {} to {}",
+            max_skcms_lcms, max_skcms_inv_lcms
+        );
         eprintln!("This confirms skcms expects Photoshop's inverted CMYK convention.");
     }
 
@@ -394,10 +414,16 @@ fn test_cmyk_grid(profile_data: &[u8]) {
         let over_5 = diffs.iter().filter(|d| d.1 > 5).count();
         let over_10 = diffs.iter().filter(|d| d.1 > 10).count();
 
-        eprintln!("  {}: max={}, avg={:.2}, >5: {} ({}%), >10: {} ({}%)",
-            name, max, avg,
-            over_5, over_5 * 100 / diffs.len(),
-            over_10, over_10 * 100 / diffs.len());
+        eprintln!(
+            "  {}: max={}, avg={:.2}, >5: {} ({}%), >10: {} ({}%)",
+            name,
+            max,
+            avg,
+            over_5,
+            over_5 * 100 / diffs.len(),
+            over_10,
+            over_10 * 100 / diffs.len()
+        );
 
         // Show worst cases
         let mut worst: Vec<_> = diffs.iter().collect();
@@ -405,8 +431,10 @@ fn test_cmyk_grid(profile_data: &[u8]) {
         if worst[0].1 > 10 {
             eprintln!("    Worst cases:");
             for (cmyk, diff, result, lcms2) in worst.iter().take(3) {
-                eprintln!("      CMYK {:?} -> {:?} vs lcms2 {:?} (diff={})",
-                    cmyk, result, lcms2, diff);
+                eprintln!(
+                    "      CMYK {:?} -> {:?} vs lcms2 {:?} (diff={})",
+                    cmyk, result, lcms2, diff
+                );
             }
         }
     };

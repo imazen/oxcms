@@ -135,11 +135,7 @@ pub fn linear_to_srgb(v: f64) -> f64 {
 /// Cube root function (handles negative values)
 #[inline]
 fn cbrt(x: f64) -> f64 {
-    if x >= 0.0 {
-        x.cbrt()
-    } else {
-        -(-x).cbrt()
-    }
+    if x >= 0.0 { x.cbrt() } else { -(-x).cbrt() }
 }
 
 /// Convert linear RGB to XYB
@@ -179,11 +175,13 @@ pub fn xyb_to_linear_rgb(xyb: &Xyb) -> (f64, f64, f64) {
     let s_linear = s_gamma.powi(3) - BIAS;
 
     // LMS to RGB matrix (inverse of forward matrix)
-    let r = 11.031566901960783 * l_linear - 9.866943921568629 * m_linear
+    let r = 11.031566901960783 * l_linear
+        - 9.866943921568629 * m_linear
         - 0.16462299647058826 * s_linear;
     let g = -3.254147380392157 * l_linear + 4.418770392156863 * m_linear
         - 0.16462299647058826 * s_linear;
-    let b = -3.6588512862745097 * l_linear + 2.7129230470588235 * m_linear
+    let b = -3.6588512862745097 * l_linear
+        + 2.7129230470588235 * m_linear
         + 1.9459282392156863 * s_linear;
 
     (r, g, b)
@@ -210,7 +208,11 @@ pub fn xyb_to_linear_rgb_buffer(xyb_data: &[f32], rgb_out: &mut [f32]) {
     assert_eq!(xyb_data.len() % 3, 0);
 
     for (xyb_chunk, rgb_chunk) in xyb_data.chunks_exact(3).zip(rgb_out.chunks_exact_mut(3)) {
-        let xyb = Xyb::new(xyb_chunk[0] as f64, xyb_chunk[1] as f64, xyb_chunk[2] as f64);
+        let xyb = Xyb::new(
+            xyb_chunk[0] as f64,
+            xyb_chunk[1] as f64,
+            xyb_chunk[2] as f64,
+        );
         let (r, g, b) = xyb_to_linear_rgb(&xyb);
         rgb_chunk[0] = r as f32;
         rgb_chunk[1] = g as f32;
@@ -226,7 +228,11 @@ pub fn linear_rgb_to_xyb_buffer(rgb_data: &[f32], xyb_out: &mut [f32]) {
     assert_eq!(rgb_data.len() % 3, 0);
 
     for (rgb_chunk, xyb_chunk) in rgb_data.chunks_exact(3).zip(xyb_out.chunks_exact_mut(3)) {
-        let xyb = linear_rgb_to_xyb(rgb_chunk[0] as f64, rgb_chunk[1] as f64, rgb_chunk[2] as f64);
+        let xyb = linear_rgb_to_xyb(
+            rgb_chunk[0] as f64,
+            rgb_chunk[1] as f64,
+            rgb_chunk[2] as f64,
+        );
         xyb_chunk[0] = xyb.x as f32;
         xyb_chunk[1] = xyb.y as f32;
         xyb_chunk[2] = xyb.b as f32;
@@ -240,11 +246,11 @@ mod tests {
     #[test]
     fn test_round_trip() {
         let test_colors = [
-            (255, 0, 0),   // Red
-            (0, 255, 0),   // Green
-            (0, 0, 255),   // Blue
+            (255, 0, 0),     // Red
+            (0, 255, 0),     // Green
+            (0, 0, 255),     // Blue
             (255, 255, 255), // White
-            (0, 0, 0),     // Black
+            (0, 0, 0),       // Black
             (128, 128, 128), // Gray
         ];
 

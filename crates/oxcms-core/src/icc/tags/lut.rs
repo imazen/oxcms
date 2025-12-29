@@ -36,9 +36,7 @@ impl Lut8Data {
     /// Parse Lut8 data from bytes (after type signature and reserved bytes)
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 48 {
-            return Err(IccError::CorruptedData(
-                "Lut8 tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Lut8 tag too small".to_string()));
         }
 
         let input_channels = data[0];
@@ -78,12 +76,11 @@ impl Lut8Data {
 
         // CLUT: gridPoints^inputChannels * outputChannels bytes
         let clut_offset = table_offset + input_table_size;
-        let clut_size = (grid_points as usize).pow(input_channels as u32) * output_channels as usize;
+        let clut_size =
+            (grid_points as usize).pow(input_channels as u32) * output_channels as usize;
 
         if data.len() < clut_offset + clut_size {
-            return Err(IccError::CorruptedData(
-                "Lut8 CLUT truncated".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Lut8 CLUT truncated".to_string()));
         }
 
         let clut = data[clut_offset..clut_offset + clut_size].to_vec();
@@ -156,9 +153,7 @@ impl Lut16Data {
     /// Parse Lut16 data from bytes (after type signature and reserved bytes)
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 52 {
-            return Err(IccError::CorruptedData(
-                "Lut16 tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Lut16 tag too small".to_string()));
         }
 
         let input_channels = data[0];
@@ -205,13 +200,12 @@ impl Lut16Data {
 
         // CLUT: gridPoints^inputChannels * outputChannels * 2 bytes
         let clut_offset = table_offset + input_table_size;
-        let clut_entries = (grid_points as usize).pow(input_channels as u32) * output_channels as usize;
+        let clut_entries =
+            (grid_points as usize).pow(input_channels as u32) * output_channels as usize;
         let clut_size = clut_entries * 2;
 
         if data.len() < clut_offset + clut_size {
-            return Err(IccError::CorruptedData(
-                "Lut16 CLUT truncated".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Lut16 CLUT truncated".to_string()));
         }
 
         let mut clut = Vec::with_capacity(clut_entries);
@@ -277,9 +271,7 @@ impl LutAToBData {
     /// Parse lutAToB data from bytes (after type signature and reserved bytes)
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 32 {
-            return Err(IccError::CorruptedData(
-                "lutAToB tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("lutAToB tag too small".to_string()));
         }
 
         let input_channels = data[0];
@@ -313,7 +305,11 @@ impl LutAToBData {
         };
 
         let clut = if clut_offset != 0 {
-            Some(LutClut::parse(&data[clut_offset..], input_channels, output_channels)?)
+            Some(LutClut::parse(
+                &data[clut_offset..],
+                input_channels,
+                output_channels,
+            )?)
         } else {
             None
         };
@@ -359,9 +355,7 @@ impl LutBToAData {
     /// Parse lutBToA data from bytes (after type signature and reserved bytes)
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 32 {
-            return Err(IccError::CorruptedData(
-                "lutBToA tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("lutBToA tag too small".to_string()));
         }
 
         let input_channels = data[0];
@@ -394,7 +388,11 @@ impl LutBToAData {
         };
 
         let clut = if clut_offset != 0 {
-            Some(LutClut::parse(&data[clut_offset..], input_channels, output_channels)?)
+            Some(LutClut::parse(
+                &data[clut_offset..],
+                input_channels,
+                output_channels,
+            )?)
         } else {
             None
         };
@@ -430,9 +428,7 @@ impl LutMatrix {
     /// Parse matrix from bytes
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 48 {
-            return Err(IccError::CorruptedData(
-                "LUT matrix too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("LUT matrix too small".to_string()));
         }
 
         let mut matrix = [[0.0f64; 3]; 3];
@@ -485,9 +481,7 @@ impl LutClut {
     /// Parse CLUT from bytes
     pub fn parse(data: &[u8], input_channels: u8, output_channels: u8) -> Result<Self, IccError> {
         if data.len() < 20 {
-            return Err(IccError::CorruptedData(
-                "LUT CLUT too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("LUT CLUT too small".to_string()));
         }
 
         // Grid points for each dimension (16 bytes, only first input_channels used)
@@ -546,22 +540,21 @@ pub enum CurveSegment {
     /// Table curve
     Table(Vec<f64>),
     /// Parametric curve
-    Parametric {
-        curve_type: u16,
-        params: Vec<f64>,
-    },
+    Parametric { curve_type: u16, params: Vec<f64> },
 }
 
 /// Parse a set of curves from data
-fn parse_curve_set(data: &[u8], offset: usize, count: usize) -> Result<Vec<CurveSegment>, IccError> {
+fn parse_curve_set(
+    data: &[u8],
+    offset: usize,
+    count: usize,
+) -> Result<Vec<CurveSegment>, IccError> {
     let mut curves = Vec::with_capacity(count);
     let mut pos = offset;
 
     for _ in 0..count {
         if pos + 8 > data.len() {
-            return Err(IccError::CorruptedData(
-                "Curve set truncated".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Curve set truncated".to_string()));
         }
 
         let type_sig = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
@@ -572,21 +565,19 @@ fn parse_curve_set(data: &[u8], offset: usize, count: usize) -> Result<Vec<Curve
         match &type_sig.to_be_bytes() {
             b"curv" => {
                 if pos + 4 > data.len() {
-                    return Err(IccError::CorruptedData(
-                        "curv header truncated".to_string(),
-                    ));
+                    return Err(IccError::CorruptedData("curv header truncated".to_string()));
                 }
 
-                let count = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+                let count =
+                    u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
+                        as usize;
                 pos += 4;
 
                 let curve = if count == 0 {
                     CurveSegment::Identity
                 } else if count == 1 {
                     if pos + 2 > data.len() {
-                        return Err(IccError::CorruptedData(
-                            "curv gamma truncated".to_string(),
-                        ));
+                        return Err(IccError::CorruptedData("curv gamma truncated".to_string()));
                     }
                     let gamma_raw = u16::from_be_bytes([data[pos], data[pos + 1]]);
                     let gamma = gamma_raw as f64 / 256.0;
@@ -598,9 +589,7 @@ fn parse_curve_set(data: &[u8], offset: usize, count: usize) -> Result<Vec<Curve
                 } else {
                     let required = count * 2;
                     if pos + required > data.len() {
-                        return Err(IccError::CorruptedData(
-                            "curv table truncated".to_string(),
-                        ));
+                        return Err(IccError::CorruptedData("curv table truncated".to_string()));
                     }
 
                     let mut table = Vec::with_capacity(count);
@@ -616,9 +605,7 @@ fn parse_curve_set(data: &[u8], offset: usize, count: usize) -> Result<Vec<Curve
             }
             b"para" => {
                 if pos + 4 > data.len() {
-                    return Err(IccError::CorruptedData(
-                        "para header truncated".to_string(),
-                    ));
+                    return Err(IccError::CorruptedData("para header truncated".to_string()));
                 }
 
                 let func_type = u16::from_be_bytes([data[pos], data[pos + 1]]);
@@ -637,9 +624,7 @@ fn parse_curve_set(data: &[u8], offset: usize, count: usize) -> Result<Vec<Curve
 
                 let required = param_count * 4;
                 if pos + required > data.len() {
-                    return Err(IccError::CorruptedData(
-                        "para params truncated".to_string(),
-                    ));
+                    return Err(IccError::CorruptedData("para params truncated".to_string()));
                 }
 
                 let mut params = Vec::with_capacity(param_count);

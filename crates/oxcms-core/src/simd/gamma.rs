@@ -6,11 +6,7 @@
 use multiversion::multiversion;
 
 /// Apply simple gamma to a batch of values
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_gamma_batch(input: &[f64], output: &mut [f64], gamma: f64) {
     assert!(output.len() >= input.len());
 
@@ -20,11 +16,7 @@ pub fn apply_gamma_batch(input: &[f64], output: &mut [f64], gamma: f64) {
 }
 
 /// Apply simple gamma to f32 batch (more SIMD-friendly)
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_gamma_batch_f32(input: &[f32], output: &mut [f32], gamma: f32) {
     assert!(output.len() >= input.len());
 
@@ -38,11 +30,7 @@ pub fn apply_gamma_batch_f32(input: &[f32], output: &mut [f32], gamma: f32) {
 /// sRGB transfer function:
 /// - Linear segment: Y = X / 12.92 for X <= 0.04045
 /// - Power segment: Y = ((X + 0.055) / 1.055)^2.4 for X > 0.04045
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_srgb_decode_batch(input: &[f64], output: &mut [f64]) {
     assert!(output.len() >= input.len());
 
@@ -67,11 +55,7 @@ pub fn apply_srgb_decode_batch(input: &[f64], output: &mut [f64]) {
 /// Inverse sRGB transfer function:
 /// - Linear segment: Y = X * 12.92 for X <= 0.0031308
 /// - Power segment: Y = 1.055 * X^(1/2.4) - 0.055 for X > 0.0031308
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_srgb_encode_batch(input: &[f64], output: &mut [f64]) {
     assert!(output.len() >= input.len());
 
@@ -92,11 +76,7 @@ pub fn apply_srgb_encode_batch(input: &[f64], output: &mut [f64]) {
 }
 
 /// Apply sRGB decode to f32 batch
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_srgb_decode_batch_f32(input: &[f32], output: &mut [f32]) {
     assert!(output.len() >= input.len());
 
@@ -119,11 +99,7 @@ pub fn apply_srgb_decode_batch_f32(input: &[f32], output: &mut [f32]) {
 /// Apply a lookup table to a batch of values
 ///
 /// This is used for TRC curves that are stored as tables.
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn apply_lut1d_batch(input: &[f64], output: &mut [f64], lut: &[f64]) {
     assert!(output.len() >= input.len());
 

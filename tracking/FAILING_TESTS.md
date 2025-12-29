@@ -30,26 +30,59 @@ This document tracks all failing tests, their root cause, and remediation plan.
 
 **Source**: moxcms vs lcms2
 **File**: `tests/cmyk_parity.rs`
-**Status**: 🔴 Failing
+**Status**: 🔴 Failing (partially diagnosed)
 
 **Description**:
-CMYK transforms using LUT-based profiles (Coated_FOGRA39) produce different results than lcms2.
+CMYK transforms using LUT-based profiles (USWebCoatedSWOP) produce different results than lcms2.
 
-**Observed**:
+**Observed (with trilinear interpolation - moxcms default)**:
 - CMYK→RGB: max_diff=7, 32 cases >1 diff
 - RGB→CMYK: max_diff=4, 343 cases >1 diff
 
-**Pattern**:
-- Worst case: Pure yellow [0,0,192,0] → green channel differs by 7
-- Yellow axis with K=0 shows scaling error in green channel
-- Suggests LUT interpolation or colorant handling difference
+**Observed (with tetrahedral interpolation)**:
+- CMYK→RGB: max_diff=7, **4 cases >1 diff** (improved!)
+- RGB→CMYK: max_diff=4, 341 cases >1 diff (minimal change)
 
-**Root Cause**: Unknown - likely LUT interpolation method (tetrahedral vs trilinear) or boundary handling.
+**Pattern (after tetrahedral fix)**:
+- CMYK→RGB: Only 4 remaining cases, all on pure yellow axis:
+  - `[0,0, 64,0]` → lcms2: G=251, moxcms: G=248 (diff 3)
+  - `[0,0,128,0]` → lcms2: G=247, moxcms: G=242 (diff 5)
+  - `[0,0,192,0]` → lcms2: G=244, moxcms: G=237 (diff 7)
+  - `[224,128,192,64]` → diff 2
+- RGB→CMYK: ~341 cases with diff 2-4, scattered across color space
+
+**Root Cause**:
+1. **Interpolation method** (trilinear vs tetrahedral) caused most CMYK→RGB diffs - FIXED by using tetrahedral
+2. **Yellow axis boundary case** remains - differs by 3-7 in green channel
+3. **RGB→CMYK** differences - ~341 cases with diff 2-4
+
+**Analysis**:
+Both lcms2 and moxcms use the same 4D approach:
+- 3D tetrahedral on K=0 slice → Tmp1
+- 3D tetrahedral on K=1 slice → Tmp2
+- Linear interpolation between slices using K weight
+
+**Cross-CMS verification** (pure yellow axis [0,0,Y,0], green channel):
+| Y | lcms2 | mox(def) | mox(tet) | skcms | Δdef | Δtet | Δskcms |
+|---|-------|----------|----------|-------|------|------|--------|
+| 64 | 251 | 248 | 248 | 250 | 3 | 3 | 1 |
+| 128 | 247 | 242 | 242 | 246 | 5 | 5 | 1 |
+| 192 | 244 | 237 | 237 | 243 | 7 | 7 | 1 |
+| 255 | 242 | 234 | 234 | 241 | 8 | 8 | 1 |
+
+**Key findings**:
+1. skcms (Chrome) and lcms2 agree (Δ ≤1)
+2. **moxcms is the outlier** (Δ 3-8)
+3. **Tetrahedral vs trilinear makes NO difference** for pure yellow
+4. Bug is NOT in interpolation method - it's elsewhere in moxcms pipeline
 
 **Fix Plan**:
-1. Compare LUT interpolation code between moxcms and lcms2
-2. Check if moxcms uses different grid point handling
-3. Test with simpler CMYK profile to isolate
+1. ✅ Use tetrahedral interpolation (fixed other cases, not this one)
+2. ✅ Verified same algorithm structure as lcms2
+3. ✅ Cross-CMS verification shows moxcms is outlier
+4. **Next**: File upstream bug report to moxcms - bug is in CLUT handling, not interpolation
+
+**Current Workaround**: Use `InterpolationMethod::Tetrahedral` in TransformOptions
 
 **Assigned**: Unassigned
 **Target**: TBD

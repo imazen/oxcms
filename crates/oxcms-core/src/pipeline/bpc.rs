@@ -16,8 +16,8 @@
 //! - HDR to SDR conversion: Prevents black crushing
 //! - Relative colorimetric intent: BPC is typically enabled by default
 
-use crate::color::white_point::D50;
 use crate::color::Xyz;
+use crate::color::white_point::D50;
 
 /// Black point compensation parameters
 #[derive(Debug, Clone, Copy)]

@@ -37,7 +37,9 @@ impl ColorSpace {
     pub fn channels(&self) -> usize {
         match self {
             Self::Gray => 1,
-            Self::Rgb | Self::Lab | Self::Xyz | Self::YCbCr | Self::Luv | Self::Hsv | Self::Hls => 3,
+            Self::Rgb | Self::Lab | Self::Xyz | Self::YCbCr | Self::Luv | Self::Hsv | Self::Hls => {
+                3
+            }
             Self::Cmyk | Self::Cmy => 4,
             Self::MultiChannel | Self::Unknown => 0, // Variable
         }
@@ -127,7 +129,11 @@ pub struct ProfileVersion {
 impl ProfileVersion {
     /// Create a new profile version
     pub const fn new(major: u8, minor: u8, patch: u8) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 
     /// ICC v2.4
@@ -254,11 +260,7 @@ impl Matrix3x3 {
     }
 
     /// Identity matrix
-    pub const IDENTITY: Self = Self::new([
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
-    ]);
+    pub const IDENTITY: Self = Self::new([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
 
     /// Multiply matrix by a 3-element vector
     pub fn multiply_vec(&self, v: [f64; 3]) -> [f64; 3] {

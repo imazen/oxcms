@@ -2,7 +2,7 @@
 //!
 //! Benchmarks to identify which SIMD functions benefit from further optimization.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use oxcms_core::simd;
 
 /// sRGB to XYZ matrix (D65 adapted)
@@ -23,15 +23,11 @@ fn generate_rgb_data(count: usize) -> Vec<[f64; 3]> {
 }
 
 fn generate_rgb8_data(count: usize) -> Vec<u8> {
-    (0..count * 3)
-        .map(|i| ((i * 37) % 256) as u8)
-        .collect()
+    (0..count * 3).map(|i| ((i * 37) % 256) as u8).collect()
 }
 
 fn generate_f64_values(count: usize) -> Vec<f64> {
-    (0..count)
-        .map(|i| (i as f64 / count as f64))
-        .collect()
+    (0..count).map(|i| (i as f64 / count as f64)).collect()
 }
 
 fn generate_lut(size: usize) -> Vec<f64> {
@@ -154,9 +150,7 @@ fn bench_srgb_decode(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
 
         group.bench_with_input(BenchmarkId::new("simd", size), size, |b, _| {
-            b.iter(|| {
-                simd::apply_srgb_decode_batch(black_box(&input), black_box(&mut output))
-            })
+            b.iter(|| simd::apply_srgb_decode_batch(black_box(&input), black_box(&mut output)))
         });
 
         // Scalar baseline
@@ -196,9 +190,7 @@ fn bench_srgb_encode(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
 
         group.bench_with_input(BenchmarkId::new("simd", size), size, |b, _| {
-            b.iter(|| {
-                simd::apply_srgb_encode_batch(black_box(&input), black_box(&mut output))
-            })
+            b.iter(|| simd::apply_srgb_encode_batch(black_box(&input), black_box(&mut output)))
         });
 
         // Scalar baseline
@@ -283,11 +275,15 @@ fn bench_rgb8_batch_transform(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*pixel_count as u64));
 
         // Identity transform
-        group.bench_with_input(BenchmarkId::new("identity", pixel_count), pixel_count, |b, _| {
-            b.iter(|| {
-                simd::transform_rgb8_batch(black_box(&src), black_box(&mut dst), |rgb| rgb)
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("identity", pixel_count),
+            pixel_count,
+            |b, _| {
+                b.iter(|| {
+                    simd::transform_rgb8_batch(black_box(&src), black_box(&mut dst), |rgb| rgb)
+                })
+            },
+        );
 
         // Matrix transform (sRGB to XYZ-ish)
         group.bench_with_input(
@@ -320,11 +316,11 @@ fn bench_rgb8_conversion(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(*pixel_count as u64));
 
-        group.bench_with_input(BenchmarkId::new("rgb8_to_f64", pixel_count), pixel_count, |b, _| {
-            b.iter(|| {
-                simd::rgb8_to_f64_batch(black_box(&src_u8), black_box(&mut f64_buf))
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("rgb8_to_f64", pixel_count),
+            pixel_count,
+            |b, _| b.iter(|| simd::rgb8_to_f64_batch(black_box(&src_u8), black_box(&mut f64_buf))),
+        );
 
         // Pre-fill f64_buf for the reverse test
         for (chunk, out) in src_u8.chunks_exact(3).zip(f64_buf.iter_mut()) {
@@ -333,19 +329,23 @@ fn bench_rgb8_conversion(c: &mut Criterion) {
             out[2] = chunk[2] as f64 / 255.0;
         }
 
-        group.bench_with_input(BenchmarkId::new("f64_to_rgb8", pixel_count), pixel_count, |b, _| {
-            b.iter(|| {
-                simd::f64_to_rgb8_batch(black_box(&f64_buf), black_box(&mut dst_u8))
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("f64_to_rgb8", pixel_count),
+            pixel_count,
+            |b, _| b.iter(|| simd::f64_to_rgb8_batch(black_box(&f64_buf), black_box(&mut dst_u8))),
+        );
 
         // Roundtrip
-        group.bench_with_input(BenchmarkId::new("roundtrip", pixel_count), pixel_count, |b, _| {
-            b.iter(|| {
-                simd::rgb8_to_f64_batch(black_box(&src_u8), black_box(&mut f64_buf));
-                simd::f64_to_rgb8_batch(black_box(&f64_buf), black_box(&mut dst_u8));
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("roundtrip", pixel_count),
+            pixel_count,
+            |b, _| {
+                b.iter(|| {
+                    simd::rgb8_to_f64_batch(black_box(&src_u8), black_box(&mut f64_buf));
+                    simd::f64_to_rgb8_batch(black_box(&f64_buf), black_box(&mut dst_u8));
+                })
+            },
+        );
     }
 
     group.finish();

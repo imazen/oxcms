@@ -73,9 +73,7 @@ impl TextData {
     /// Parse 'mluc' type (multi-localized Unicode)
     pub fn parse_mluc(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 8 {
-            return Err(IccError::CorruptedData(
-                "mluc tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("mluc tag too small".to_string()));
         }
 
         let record_count = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
@@ -99,18 +97,10 @@ impl TextData {
             let record = &data[record_offset..];
 
             // Language code (2 bytes)
-            let lang = format!(
-                "{}{}",
-                record[0] as char,
-                record[1] as char
-            );
+            let lang = format!("{}{}", record[0] as char, record[1] as char);
 
             // Country code (2 bytes)
-            let country = format!(
-                "{}{}",
-                record[2] as char,
-                record[3] as char
-            );
+            let country = format!("{}{}", record[2] as char, record[3] as char);
 
             let locale = format!("{}-{}", lang, country);
 

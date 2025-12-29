@@ -25,9 +25,7 @@ impl CurveData {
     /// Parse curve data from bytes (after type signature and reserved bytes)
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         if data.len() < 4 {
-            return Err(IccError::CorruptedData(
-                "Curve tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("Curve tag too small".to_string()));
         }
 
         let count = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;

@@ -333,7 +333,8 @@ pub fn parametric_curve_eval_inverse(curve: &ParametricCurve, y: f64) -> f64 {
                 }
                 // Numerical derivative
                 let h = 1e-8;
-                let dfx = (parametric_curve_eval(curve, x + h) - parametric_curve_eval(curve, x - h))
+                let dfx = (parametric_curve_eval(curve, x + h)
+                    - parametric_curve_eval(curve, x - h))
                     / (2.0 * h);
                 if dfx.abs() > 1e-10 {
                     x -= fx / dfx;

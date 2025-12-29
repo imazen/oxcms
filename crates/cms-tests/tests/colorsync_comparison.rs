@@ -162,11 +162,7 @@ unsafe fn transform_colorsync(profile_path: &str, rgb: [u8; 3]) -> Option<[u8; 3
 
     CFRelease(transform);
 
-    if success {
-        Some(output)
-    } else {
-        None
-    }
+    if success { Some(output) } else { None }
 }
 
 /// Transform using skcms for comparison
@@ -187,11 +183,7 @@ fn transform_skcms(profile_data: &[u8], rgb: [u8; 3]) -> Option<[u8; 3]> {
         1,
     );
 
-    if success {
-        Some(out)
-    } else {
-        None
-    }
+    if success { Some(out) } else { None }
 }
 
 #[test]
@@ -218,7 +210,10 @@ fn test_colorsync_vs_skcms_sm245b() {
         ([0, 0, 255], "Blue"),
     ];
 
-    eprintln!("{:<12} {:>18} {:>18} {:>8}", "Color", "ColorSync", "skcms", "Match?");
+    eprintln!(
+        "{:<12} {:>18} {:>18} {:>8}",
+        "Color", "ColorSync", "skcms", "Match?"
+    );
     eprintln!("{}", "-".repeat(60));
 
     let mut all_match = true;
@@ -243,7 +238,10 @@ fn test_colorsync_vs_skcms_sm245b() {
 
         let matches = match (colorsync_result, skcms_result) {
             (Some(cs), Some(sk)) => {
-                let max_diff = (0..3).map(|i| (cs[i] as i32 - sk[i] as i32).abs()).max().unwrap();
+                let max_diff = (0..3)
+                    .map(|i| (cs[i] as i32 - sk[i] as i32).abs())
+                    .max()
+                    .unwrap();
                 if max_diff <= 1 {
                     "YES"
                 } else {
@@ -254,7 +252,10 @@ fn test_colorsync_vs_skcms_sm245b() {
             _ => "N/A",
         };
 
-        eprintln!("{:<12} {:>18} {:>18} {:>8}", name, cs_str, skcms_str, matches);
+        eprintln!(
+            "{:<12} {:>18} {:>18} {:>8}",
+            name, cs_str, skcms_str, matches
+        );
     }
 
     eprintln!("\n{}", "=".repeat(70));

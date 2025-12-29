@@ -73,11 +73,7 @@ fn get_sm245b_path() -> Option<std::path::PathBuf> {
 fn test_colorant_sum_produces_identity_scaling() {
     // Create a test matrix (arbitrary invertible matrix)
     let m = moxcms::Matrix3d {
-        v: [
-            [0.4, 0.3, 0.2],
-            [0.2, 0.7, 0.1],
-            [0.0, 0.1, 0.9],
-        ],
+        v: [[0.4, 0.3, 0.2], [0.2, 0.7, 0.1], [0.0, 0.1, 0.9]],
     };
 
     // Colorant sum = M × [1,1,1]
@@ -110,9 +106,9 @@ fn test_d50_produces_wrong_scaling_for_d65_colorants() {
     // SM245B-like colorants (sum to D65, not D50)
     let m = moxcms::Matrix3d {
         v: [
-            [0.458725, 0.322952, 0.168488],  // Sum ≈ 0.950
-            [0.232895, 0.697388, 0.069717],  // Sum = 1.000
-            [0.014114, 0.149780, 0.923767],  // Sum ≈ 1.088
+            [0.458725, 0.322952, 0.168488], // Sum ≈ 0.950
+            [0.232895, 0.697388, 0.069717], // Sum = 1.000
+            [0.014114, 0.149780, 0.923767], // Sum ≈ 1.088
         ],
     };
 
@@ -159,7 +155,10 @@ fn test_moxcms_matches_skcms_for_sm245b() {
 
     eprintln!("\nmoxcms rgb_to_xyz_matrix:");
     for i in 0..3 {
-        eprintln!("  [{:.6}, {:.6}, {:.6}]", mox_matrix.v[i][0], mox_matrix.v[i][1], mox_matrix.v[i][2]);
+        eprintln!(
+            "  [{:.6}, {:.6}, {:.6}]",
+            mox_matrix.v[i][0], mox_matrix.v[i][1], mox_matrix.v[i][2]
+        );
     }
 
     eprintln!("\nskcms toXYZD50:");
@@ -214,7 +213,10 @@ fn test_transform_outputs_match_all_cms() {
     ];
 
     eprintln!("\nTransform comparison (SM245B → sRGB):");
-    eprintln!("{:<12} {:>15} {:>15} {:>15}", "Color", "lcms2", "skcms", "moxcms");
+    eprintln!(
+        "{:<12} {:>15} {:>15} {:>15}",
+        "Color", "lcms2", "skcms", "moxcms"
+    );
     eprintln!("{}", "-".repeat(60));
 
     let mut total_lcms_skcms_diff = 0i32;
@@ -226,10 +228,13 @@ fn test_transform_outputs_match_all_cms() {
             let profile = lcms2::Profile::new_icc(&profile_data).unwrap();
             let srgb = lcms2::Profile::new_srgb();
             let transform = lcms2::Transform::<[u8; 3], [u8; 3]>::new(
-                &profile, lcms2::PixelFormat::RGB_8,
-                &srgb, lcms2::PixelFormat::RGB_8,
+                &profile,
+                lcms2::PixelFormat::RGB_8,
+                &srgb,
+                lcms2::PixelFormat::RGB_8,
                 lcms2::Intent::Perceptual,
-            ).unwrap();
+            )
+            .unwrap();
             let mut out = [0u8; 3];
             transform.transform_pixels(std::slice::from_ref(rgb), std::slice::from_mut(&mut out));
             out
@@ -258,10 +263,14 @@ fn test_transform_outputs_match_all_cms() {
         let mox_out = {
             let profile = moxcms::ColorProfile::new_from_slice(&profile_data).unwrap();
             let srgb = moxcms::ColorProfile::new_srgb();
-            let transform = profile.create_transform_8bit(
-                moxcms::Layout::Rgb, &srgb, moxcms::Layout::Rgb,
-                moxcms::TransformOptions::default(),
-            ).unwrap();
+            let transform = profile
+                .create_transform_8bit(
+                    moxcms::Layout::Rgb,
+                    &srgb,
+                    moxcms::Layout::Rgb,
+                    moxcms::TransformOptions::default(),
+                )
+                .unwrap();
             let mut out = [0u8; 3];
             transform.transform(rgb, &mut out).unwrap();
             out
@@ -270,9 +279,15 @@ fn test_transform_outputs_match_all_cms() {
         eprintln!(
             "{:<12} [{:3},{:3},{:3}] [{:3},{:3},{:3}] [{:3},{:3},{:3}]",
             name,
-            lcms_out[0], lcms_out[1], lcms_out[2],
-            skcms_out[0], skcms_out[1], skcms_out[2],
-            mox_out[0], mox_out[1], mox_out[2],
+            lcms_out[0],
+            lcms_out[1],
+            lcms_out[2],
+            skcms_out[0],
+            skcms_out[1],
+            skcms_out[2],
+            mox_out[0],
+            mox_out[1],
+            mox_out[2],
         );
 
         // Track differences
@@ -282,11 +297,17 @@ fn test_transform_outputs_match_all_cms() {
         }
     }
 
-    eprintln!("\nTotal difference lcms2 vs skcms: {}", total_lcms_skcms_diff);
+    eprintln!(
+        "\nTotal difference lcms2 vs skcms: {}",
+        total_lcms_skcms_diff
+    );
     eprintln!("Total difference moxcms vs skcms: {}", total_mox_skcms_diff);
 
     assert_eq!(total_mox_skcms_diff, 0, "moxcms should exactly match skcms");
-    assert!(total_lcms_skcms_diff <= 7, "lcms2 should closely match skcms");
+    assert!(
+        total_lcms_skcms_diff <= 7,
+        "lcms2 should closely match skcms"
+    );
 
     eprintln!("\n✓ PROVED: All three CMS implementations produce matching outputs");
 }
@@ -298,16 +319,15 @@ fn test_mathematical_identity_formal_proof() {
 
     // Use exact rational-like values to minimize floating point issues
     let m = moxcms::Matrix3d {
-        v: [
-            [0.5, 0.25, 0.125],
-            [0.25, 0.5, 0.25],
-            [0.125, 0.25, 0.5],
-        ],
+        v: [[0.5, 0.25, 0.125], [0.25, 0.5, 0.25], [0.125, 0.25, 0.5]],
     };
 
     eprintln!("Given matrix M:");
     for i in 0..3 {
-        eprintln!("  [{:8.6}, {:8.6}, {:8.6}]", m.v[i][0], m.v[i][1], m.v[i][2]);
+        eprintln!(
+            "  [{:8.6}, {:8.6}, {:8.6}]",
+            m.v[i][0], m.v[i][1], m.v[i][2]
+        );
     }
 
     // Step 1: Compute colorant_sum = M × [1,1,1]
@@ -316,19 +336,27 @@ fn test_mathematical_identity_formal_proof() {
         y: m.v[1][0] + m.v[1][1] + m.v[1][2],
         z: m.v[2][0] + m.v[2][1] + m.v[2][2],
     };
-    eprintln!("\nStep 1: colorant_sum = M × [1,1,1] = [{:.6}, {:.6}, {:.6}]",
-              colorant_sum.x, colorant_sum.y, colorant_sum.z);
+    eprintln!(
+        "\nStep 1: colorant_sum = M × [1,1,1] = [{:.6}, {:.6}, {:.6}]",
+        colorant_sum.x, colorant_sum.y, colorant_sum.z
+    );
 
     // Step 2: Compute M⁻¹
     let m_inv = m.inverse();
     eprintln!("\nStep 2: M⁻¹ =");
     for i in 0..3 {
-        eprintln!("  [{:8.6}, {:8.6}, {:8.6}]", m_inv.v[i][0], m_inv.v[i][1], m_inv.v[i][2]);
+        eprintln!(
+            "  [{:8.6}, {:8.6}, {:8.6}]",
+            m_inv.v[i][0], m_inv.v[i][1], m_inv.v[i][2]
+        );
     }
 
     // Step 3: Compute s = M⁻¹ × colorant_sum
     let s = m_inv.mul_vector(colorant_sum.to_vector_d());
-    eprintln!("\nStep 3: s = M⁻¹ × colorant_sum = [{:.6}, {:.6}, {:.6}]", s.v[0], s.v[1], s.v[2]);
+    eprintln!(
+        "\nStep 3: s = M⁻¹ × colorant_sum = [{:.6}, {:.6}, {:.6}]",
+        s.v[0], s.v[1], s.v[2]
+    );
 
     // Verify s ≈ [1,1,1]
     assert!((s.v[0] - 1.0).abs() < 1e-10, "s[0] should be 1.0");
@@ -340,7 +368,10 @@ fn test_mathematical_identity_formal_proof() {
     let result = moxcms::ColorProfile::rgb_to_xyz_d(m, colorant_sum);
     eprintln!("\nStep 4: result = M × diag(s) =");
     for i in 0..3 {
-        eprintln!("  [{:8.6}, {:8.6}, {:8.6}]", result.v[i][0], result.v[i][1], result.v[i][2]);
+        eprintln!(
+            "  [{:8.6}, {:8.6}, {:8.6}]",
+            result.v[i][0], result.v[i][1], result.v[i][2]
+        );
     }
 
     // Verify result = M

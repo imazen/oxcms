@@ -9,11 +9,7 @@ use multiversion::multiversion;
 ///
 /// This is the core operation for RGB↔XYZ conversions.
 /// The matrix is stored in row-major order.
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn matrix_multiply_vec3(matrix: &[[f64; 3]; 3], vec: [f64; 3]) -> [f64; 3] {
     // Even with SIMD, f64 operations on 3-element vectors are tricky
     // because they don't align well with 128/256-bit registers.
@@ -30,11 +26,7 @@ pub fn matrix_multiply_vec3(matrix: &[[f64; 3]; 3], vec: [f64; 3]) -> [f64; 3] {
 ///
 /// This is more amenable to SIMD optimization as we can process
 /// multiple pixels at once.
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn matrix_multiply_vec3_batch(
     matrix: &[[f64; 3]; 3],
     input: &[[f64; 3]],
@@ -67,11 +59,7 @@ pub fn matrix_multiply_vec3_batch(
 /// Multiply a 3x3 matrix by a batch of f32 vectors
 ///
 /// f32 is more SIMD-friendly (4 per 128-bit, 8 per 256-bit register).
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn matrix_multiply_vec3_batch_f32(
     matrix: &[[f32; 3]; 3],
     input: &[[f32; 3]],

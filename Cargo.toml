@@ -14,7 +14,7 @@ repository = "https://github.com/user/oxcms"
 
 [workspace.dependencies]
 # Core dependencies - using patched local version with relaxed version parsing
-moxcms = { path = "external/moxcms" }
+moxcms = { path = "external/moxcms", features = ["options"] }
 lcms2 = "6"
 qcms = "0.3"
 skcms-sys = { path = "crates/skcms-sys" }

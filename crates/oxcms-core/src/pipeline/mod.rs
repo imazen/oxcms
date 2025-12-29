@@ -27,10 +27,10 @@ mod matrix_shaper;
 mod stages;
 
 pub use bpc::{BpcParams, detect_black_point};
-pub use context::{RenderIntent, TransformFlags, TransformContext};
-pub use lut::{LutPipeline, LutCurve, ClutData};
+pub use context::{RenderIntent, TransformContext, TransformFlags};
+pub use lut::{ClutData, LutCurve, LutPipeline};
 pub use matrix_shaper::{MatrixShaperPipeline, MatrixShaperTransform};
-pub use stages::{PipelineStage, TrcStage, MatrixStage};
+pub use stages::{MatrixStage, PipelineStage, TrcStage};
 
 use crate::icc::{IccError, IccProfile, IccRenderingIntent, TagSignature};
 
@@ -99,7 +99,10 @@ impl Pipeline {
     }
 
     /// Create a pipeline for CMYK → RGB transform
-    pub fn cmyk_to_rgb(cmyk_profile: &IccProfile, rgb_profile: &IccProfile) -> Result<Self, IccError> {
+    pub fn cmyk_to_rgb(
+        cmyk_profile: &IccProfile,
+        rgb_profile: &IccProfile,
+    ) -> Result<Self, IccError> {
         if !cmyk_profile.is_cmyk() {
             return Err(IccError::Unsupported(
                 "Source profile is not CMYK".to_string(),
@@ -111,7 +114,10 @@ impl Pipeline {
     }
 
     /// Create a pipeline for RGB → CMYK transform
-    pub fn rgb_to_cmyk(rgb_profile: &IccProfile, cmyk_profile: &IccProfile) -> Result<Self, IccError> {
+    pub fn rgb_to_cmyk(
+        rgb_profile: &IccProfile,
+        cmyk_profile: &IccProfile,
+    ) -> Result<Self, IccError> {
         if !cmyk_profile.is_cmyk() {
             return Err(IccError::Unsupported(
                 "Destination profile is not CMYK".to_string(),
@@ -129,7 +135,10 @@ impl Pipeline {
         match self {
             Pipeline::MatrixShaper(p) => p.transform_rgb(rgb),
             Pipeline::Lut(p) => p.transform_rgb(rgb),
-            Pipeline::ChainedLut { source, destination } => {
+            Pipeline::ChainedLut {
+                source,
+                destination,
+            } => {
                 // Source: device → PCS (3 channels)
                 let pcs = source.transform_rgb(rgb);
                 // Destination: PCS → device (3 channels for RGB)
@@ -143,7 +152,10 @@ impl Pipeline {
     /// Input: CMYK [0, 1], Output: RGB [0, 1]
     pub fn transform_cmyk_to_rgb(&self, cmyk: [f64; 4]) -> [f64; 3] {
         match self {
-            Pipeline::ChainedLut { source, destination } => {
+            Pipeline::ChainedLut {
+                source,
+                destination,
+            } => {
                 // Source: CMYK → PCS (via A2B LUT)
                 let pcs = source.transform(&cmyk);
                 // PCS is typically Lab or XYZ (3 channels)
@@ -176,7 +188,10 @@ impl Pipeline {
     /// Input: RGB [0, 1], Output: CMYK [0, 1]
     pub fn transform_rgb_to_cmyk(&self, rgb: [f64; 3]) -> [f64; 4] {
         match self {
-            Pipeline::ChainedLut { source, destination } => {
+            Pipeline::ChainedLut {
+                source,
+                destination,
+            } => {
                 // Source: RGB → PCS (via A2B LUT, 3ch → 3ch)
                 let pcs = source.transform_rgb(rgb);
                 // Destination: PCS → CMYK (via B2A LUT, 3ch → 4ch)
@@ -373,11 +388,17 @@ mod tests {
         let source = LutPipeline::identity(4, 3); // CMYK → PCS
         let destination = LutPipeline::identity(3, 4); // PCS → CMYK
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         // Verify the pipeline matches the expected variant
         match &pipeline {
-            Pipeline::ChainedLut { source, destination } => {
+            Pipeline::ChainedLut {
+                source,
+                destination,
+            } => {
                 assert_eq!(source.input_channels, 4);
                 assert_eq!(source.output_channels, 3);
                 assert_eq!(destination.input_channels, 3);
@@ -393,7 +414,10 @@ mod tests {
         let source = LutPipeline::identity(4, 3); // CMYK → PCS (3ch)
         let destination = LutPipeline::identity(3, 3); // PCS → RGB
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         // Test CMYK to RGB transform (with identity, first 3 channels pass through)
         let cmyk = [0.5, 0.3, 0.2, 0.1];
@@ -411,7 +435,10 @@ mod tests {
         let source = LutPipeline::identity(3, 3); // RGB → PCS
         let destination = LutPipeline::identity(3, 4); // PCS → CMYK
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         let rgb = [0.5, 0.3, 0.2];
         let cmyk = pipeline.transform_rgb_to_cmyk(rgb);
@@ -429,7 +456,10 @@ mod tests {
         let source = LutPipeline::identity(4, 3); // CMYK → PCS
         let destination = LutPipeline::identity(3, 3); // PCS → RGB
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         // CMYK8 to RGB8
         let cmyk8 = [128u8, 64, 32, 16];
@@ -448,7 +478,10 @@ mod tests {
         let source = LutPipeline::identity(3, 3); // RGB → PCS
         let destination = LutPipeline::identity(3, 4); // PCS → CMYK
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         let rgb8 = [200u8, 100, 50];
         let mut cmyk8 = [0u8; 4];
@@ -467,7 +500,10 @@ mod tests {
         let source = LutPipeline::identity(4, 3);
         let destination = LutPipeline::identity(3, 3);
 
-        let pipeline = Pipeline::ChainedLut { source, destination };
+        let pipeline = Pipeline::ChainedLut {
+            source,
+            destination,
+        };
 
         let cmyk16 = [32768u16, 16384, 8192, 4096];
         let mut rgb16 = [0u16; 3];

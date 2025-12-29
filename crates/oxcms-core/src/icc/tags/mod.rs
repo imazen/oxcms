@@ -14,7 +14,7 @@ mod text;
 mod xyz;
 
 pub use curves::{CurveData, ParametricCurveData};
-pub use lut::{CurveSegment, Lut16Data, Lut8Data, LutAToBData, LutBToAData, LutClut};
+pub use lut::{CurveSegment, Lut8Data, Lut16Data, LutAToBData, LutBToAData, LutClut};
 pub use text::TextData;
 pub use xyz::XyzTagData;
 
@@ -45,10 +45,7 @@ pub enum TagData {
     /// Chromatic adaptation matrix (sf32)
     ChromaticAdaptation([[f64; 3]; 3]),
     /// Unknown/unsupported tag type
-    Unknown {
-        type_sig: u32,
-        data: Vec<u8>,
-    },
+    Unknown { type_sig: u32, data: Vec<u8> },
 }
 
 impl TagData {
@@ -201,9 +198,7 @@ impl TagData {
 /// Parse sf32 type as 3x3 matrix
 fn parse_sf32_matrix(data: &[u8]) -> Result<[[f64; 3]; 3], IccError> {
     if data.len() < 36 {
-        return Err(IccError::CorruptedData(
-            "sf32 matrix too small".to_string(),
-        ));
+        return Err(IccError::CorruptedData("sf32 matrix too small".to_string()));
     }
 
     let mut matrix = [[0.0f64; 3]; 3];

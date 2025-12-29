@@ -55,9 +55,21 @@ fn testdata_dir() -> PathBuf {
 /// Extract the 3x3 colorant matrix from a profile
 fn extract_colorant_matrix(profile: &moxcms::ColorProfile) -> [[f64; 3]; 3] {
     [
-        [profile.red_colorant.x, profile.green_colorant.x, profile.blue_colorant.x],
-        [profile.red_colorant.y, profile.green_colorant.y, profile.blue_colorant.y],
-        [profile.red_colorant.z, profile.green_colorant.z, profile.blue_colorant.z],
+        [
+            profile.red_colorant.x,
+            profile.green_colorant.x,
+            profile.blue_colorant.x,
+        ],
+        [
+            profile.red_colorant.y,
+            profile.green_colorant.y,
+            profile.blue_colorant.y,
+        ],
+        [
+            profile.red_colorant.z,
+            profile.green_colorant.z,
+            profile.blue_colorant.z,
+        ],
     ]
 }
 
@@ -124,9 +136,7 @@ fn transform_moxcms(profile_data: &[u8], rgb: [u8; 3]) -> Option<[u8; 3]> {
 fn format_matrix(m: &[[f64; 3]; 3]) -> String {
     format!(
         "  [{:.6}, {:.6}, {:.6}]\n  [{:.6}, {:.6}, {:.6}]\n  [{:.6}, {:.6}, {:.6}]",
-        m[0][0], m[0][1], m[0][2],
-        m[1][0], m[1][1], m[1][2],
-        m[2][0], m[2][1], m[2][2],
+        m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2],
     )
 }
 
@@ -151,7 +161,10 @@ fn test_sm245b_comprehensive_analysis() {
     // === SECTION 1: Profile Metadata ===
     eprintln!("\n## 1. Profile Metadata\n");
     eprintln!("Version: {:?}", mox_profile.version());
-    eprintln!("Has CHAD tag: {}", mox_profile.chromatic_adaptation.is_some());
+    eprintln!(
+        "Has CHAD tag: {}",
+        mox_profile.chromatic_adaptation.is_some()
+    );
 
     // === SECTION 2: Colorant Analysis ===
     eprintln!("\n## 2. Colorant Analysis\n");
@@ -163,20 +176,34 @@ fn test_sm245b_comprehensive_analysis() {
     let sum_x = colorant_matrix[0][0] + colorant_matrix[0][1] + colorant_matrix[0][2];
     let sum_y = colorant_matrix[1][0] + colorant_matrix[1][1] + colorant_matrix[1][2];
     let sum_z = colorant_matrix[2][0] + colorant_matrix[2][1] + colorant_matrix[2][2];
-    eprintln!("\nColorant Sum (R+G+B): [{:.6}, {:.6}, {:.6}]", sum_x, sum_y, sum_z);
+    eprintln!(
+        "\nColorant Sum (R+G+B): [{:.6}, {:.6}, {:.6}]",
+        sum_x, sum_y, sum_z
+    );
 
     // Reference white points
     let d50 = moxcms::Chromaticity::D50.to_xyzd();
     let d65 = moxcms::Chromaticity::D65.to_xyzd();
-    eprintln!("D50 Reference:        [{:.6}, {:.6}, {:.6}]", d50.x, d50.y, d50.z);
-    eprintln!("D65 Reference:        [{:.6}, {:.6}, {:.6}]", d65.x, d65.y, d65.z);
+    eprintln!(
+        "D50 Reference:        [{:.6}, {:.6}, {:.6}]",
+        d50.x, d50.y, d50.z
+    );
+    eprintln!(
+        "D65 Reference:        [{:.6}, {:.6}, {:.6}]",
+        d65.x, d65.y, d65.z
+    );
 
     // Calculate distances
-    let dist_d50 = ((sum_x - d50.x).powi(2) + (sum_y - d50.y).powi(2) + (sum_z - d50.z).powi(2)).sqrt();
-    let dist_d65 = ((sum_x - d65.x).powi(2) + (sum_y - d65.y).powi(2) + (sum_z - d65.z).powi(2)).sqrt();
+    let dist_d50 =
+        ((sum_x - d50.x).powi(2) + (sum_y - d50.y).powi(2) + (sum_z - d50.z).powi(2)).sqrt();
+    let dist_d65 =
+        ((sum_x - d65.x).powi(2) + (sum_y - d65.y).powi(2) + (sum_z - d65.z).powi(2)).sqrt();
     eprintln!("\nDistance from D50: {:.6}", dist_d50);
     eprintln!("Distance from D65: {:.6}", dist_d65);
-    eprintln!("Colorant sum is closer to: {}", if dist_d50 < dist_d65 { "D50" } else { "D65" });
+    eprintln!(
+        "Colorant sum is closer to: {}",
+        if dist_d50 < dist_d65 { "D50" } else { "D65" }
+    );
 
     // === SECTION 3: ICC Spec Reference ===
     eprintln!("\n## 3. ICC Specification Reference\n");
@@ -222,7 +249,10 @@ fn test_sm245b_comprehensive_analysis() {
         ([0, 0, 255], "Blue"),
     ];
 
-    eprintln!("{:<15} {:>20} {:>20} {:>20}", "Input", "lcms2", "skcms", "moxcms");
+    eprintln!(
+        "{:<15} {:>20} {:>20} {:>20}",
+        "Input", "lcms2", "skcms", "moxcms"
+    );
     eprintln!("{}", "-".repeat(80));
 
     let mut max_lcms_skcms_diff = 0i32;
@@ -248,11 +278,17 @@ fn test_sm245b_comprehensive_analysis() {
 
         // Calculate max differences
         if let (Some(l), Some(s)) = (lcms_out, skcms_out) {
-            let diff = (0..3).map(|i| (l[i] as i32 - s[i] as i32).abs()).max().unwrap();
+            let diff = (0..3)
+                .map(|i| (l[i] as i32 - s[i] as i32).abs())
+                .max()
+                .unwrap();
             max_lcms_skcms_diff = max_lcms_skcms_diff.max(diff);
         }
         if let (Some(m), Some(s)) = (mox_out, skcms_out) {
-            let diff = (0..3).map(|i| (m[i] as i32 - s[i] as i32).abs()).max().unwrap();
+            let diff = (0..3)
+                .map(|i| (m[i] as i32 - s[i] as i32).abs())
+                .max()
+                .unwrap();
             max_mox_skcms_diff = max_mox_skcms_diff.max(diff);
         }
     }
@@ -264,15 +300,27 @@ fn test_sm245b_comprehensive_analysis() {
     eprintln!("\n## 6. Verification\n");
 
     if max_mox_skcms_diff <= 2 {
-        eprintln!("✓ moxcms matches skcms within tolerance (max diff: {})", max_mox_skcms_diff);
+        eprintln!(
+            "✓ moxcms matches skcms within tolerance (max diff: {})",
+            max_mox_skcms_diff
+        );
     } else {
-        eprintln!("✗ moxcms differs from skcms significantly (max diff: {})", max_mox_skcms_diff);
+        eprintln!(
+            "✗ moxcms differs from skcms significantly (max diff: {})",
+            max_mox_skcms_diff
+        );
     }
 
     if max_lcms_skcms_diff <= 2 {
-        eprintln!("✓ lcms2 matches skcms within tolerance (max diff: {})", max_lcms_skcms_diff);
+        eprintln!(
+            "✓ lcms2 matches skcms within tolerance (max diff: {})",
+            max_lcms_skcms_diff
+        );
     } else {
-        eprintln!("✗ lcms2 differs from skcms significantly (max diff: {})", max_lcms_skcms_diff);
+        eprintln!(
+            "✗ lcms2 differs from skcms significantly (max diff: {})",
+            max_lcms_skcms_diff
+        );
     }
 
     // === SECTION 7: Conclusions ===
@@ -340,7 +388,10 @@ fn test_verify_skcms_uses_colorants_directly() {
                 }
             }
 
-            eprintln!("\nMax difference between skcms toXYZD50 and ICC colorants: {:.9}", max_diff);
+            eprintln!(
+                "\nMax difference between skcms toXYZD50 and ICC colorants: {:.9}",
+                max_diff
+            );
 
             if max_diff < 0.0001 {
                 eprintln!("✓ VERIFIED: skcms toXYZD50 = colorant matrix (no white point scaling)");
@@ -348,7 +399,10 @@ fn test_verify_skcms_uses_colorants_directly() {
                 eprintln!("✗ Matrices differ unexpectedly");
             }
 
-            assert!(max_diff < 0.0001, "skcms should use colorant matrix directly");
+            assert!(
+                max_diff < 0.0001,
+                "skcms should use colorant matrix directly"
+            );
         }
     }
 

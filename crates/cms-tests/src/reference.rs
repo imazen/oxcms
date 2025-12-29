@@ -115,12 +115,18 @@ pub fn transform_moxcms_cmyk_to_rgb(
     cmyk_profile_data: &[u8],
     src_pixels: &[u8], // CMYK pixels (4 bytes per pixel)
 ) -> Result<Vec<u8>, String> {
-    use moxcms::{ColorProfile, Layout, TransformOptions};
+    use moxcms::{ColorProfile, InterpolationMethod, Layout, TransformOptions};
 
     let cmyk_profile = ColorProfile::new_from_slice(cmyk_profile_data)
         .map_err(|e| format!("moxcms CMYK profile: {:?}", e))?;
 
     let srgb = ColorProfile::new_srgb();
+
+    // Use tetrahedral interpolation to match lcms2
+    let options = TransformOptions {
+        interpolation_method: InterpolationMethod::Tetrahedral,
+        ..TransformOptions::default()
+    };
 
     // moxcms uses Layout::Rgba for CMYK data (4 bytes per pixel, same as CMYK)
     let transform = cmyk_profile
@@ -128,7 +134,7 @@ pub fn transform_moxcms_cmyk_to_rgb(
             Layout::Rgba, // CMYK uses Rgba layout in moxcms
             &srgb,
             Layout::Rgb,
-            TransformOptions::default(),
+            options,
         )
         .map_err(|e| format!("moxcms CMYK->RGB transform: {:?}", e))?;
 
@@ -176,12 +182,18 @@ pub fn transform_moxcms_rgb_to_cmyk(
     cmyk_profile_data: &[u8],
     src_pixels: &[u8], // RGB pixels (3 bytes per pixel)
 ) -> Result<Vec<u8>, String> {
-    use moxcms::{ColorProfile, Layout, TransformOptions};
+    use moxcms::{ColorProfile, InterpolationMethod, Layout, TransformOptions};
 
     let srgb = ColorProfile::new_srgb();
 
     let cmyk_profile = ColorProfile::new_from_slice(cmyk_profile_data)
         .map_err(|e| format!("moxcms CMYK profile: {:?}", e))?;
+
+    // Use tetrahedral interpolation to match lcms2
+    let options = TransformOptions {
+        interpolation_method: InterpolationMethod::Tetrahedral,
+        ..TransformOptions::default()
+    };
 
     // moxcms uses Layout::Rgba for CMYK data (4 bytes per pixel, same as CMYK)
     let transform = srgb
@@ -189,7 +201,7 @@ pub fn transform_moxcms_rgb_to_cmyk(
             Layout::Rgb,
             &cmyk_profile,
             Layout::Rgba, // CMYK uses Rgba layout in moxcms
-            TransformOptions::default(),
+            options,
         )
         .map_err(|e| format!("moxcms RGB->CMYK transform: {:?}", e))?;
 

@@ -7,11 +7,7 @@ use multiversion::multiversion;
 /// Transform a buffer of RGB8 pixels
 ///
 /// Combines u8→f64 conversion, transform, and f64→u8 conversion.
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn transform_rgb8_batch<F>(src: &[u8], dst: &mut [u8], transform_fn: F)
 where
     F: Fn([f64; 3]) -> [f64; 3],
@@ -35,11 +31,7 @@ where
 }
 
 /// Transform a buffer of RGB16 pixels
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn transform_rgb16_batch<F>(src: &[u16], dst: &mut [u16], transform_fn: F)
 where
     F: Fn([f64; 3]) -> [f64; 3],
@@ -63,11 +55,7 @@ where
 }
 
 /// Convert u8 RGB to normalized f64 RGB
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn rgb8_to_f64_batch(src: &[u8], dst: &mut [[f64; 3]]) {
     assert!(src.len() % 3 == 0);
     assert!(dst.len() >= src.len() / 3);
@@ -80,11 +68,7 @@ pub fn rgb8_to_f64_batch(src: &[u8], dst: &mut [[f64; 3]]) {
 }
 
 /// Convert normalized f64 RGB to u8 RGB
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn f64_to_rgb8_batch(src: &[[f64; 3]], dst: &mut [u8]) {
     assert!(dst.len() >= src.len() * 3);
 
@@ -96,11 +80,7 @@ pub fn f64_to_rgb8_batch(src: &[[f64; 3]], dst: &mut [u8]) {
 }
 
 /// Apply clamping to a batch of RGB values
-#[multiversion(targets(
-    "x86_64+avx2",
-    "x86_64+sse4.1",
-    "aarch64+neon",
-))]
+#[multiversion(targets("x86_64+avx2", "x86_64+sse4.1", "aarch64+neon",))]
 pub fn clamp_rgb_batch(data: &mut [[f64; 3]]) {
     for rgb in data.iter_mut() {
         rgb[0] = rgb[0].clamp(0.0, 1.0);

@@ -139,8 +139,12 @@ impl IccProfile {
         for i in 0..count {
             let offset = table_start + i * entry_size;
 
-            let signature =
-                u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]);
+            let signature = u32::from_be_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ]);
             let tag_offset = u32::from_be_bytes([
                 data[offset + 4],
                 data[offset + 5],

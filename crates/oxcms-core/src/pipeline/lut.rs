@@ -12,8 +12,8 @@
 //! - Matrix (optional)
 //! - B curves (output)
 
-use crate::icc::tags::{CurveSegment, Lut16Data, Lut8Data, LutAToBData, LutBToAData, TagData};
 use crate::icc::IccError;
+use crate::icc::tags::{CurveSegment, Lut8Data, Lut16Data, LutAToBData, LutBToAData, TagData};
 use crate::math::{tetrahedral_interp, trilinear_interp};
 
 /// A LUT-based transform pipeline
@@ -224,9 +224,7 @@ impl LutPipeline {
             TagData::Lut16(lut) => Ok(Self::from_lut16(lut)),
             TagData::LutAToB(lut) => Ok(Self::from_lut_atob(lut)),
             TagData::LutBToA(lut) => Ok(Self::from_lut_btoa(lut)),
-            _ => Err(IccError::Unsupported(
-                "Tag is not a LUT type".to_string(),
-            )),
+            _ => Err(IccError::Unsupported("Tag is not a LUT type".to_string())),
         }
     }
 
@@ -464,22 +462,86 @@ impl LutPipeline {
 
         for ch in 0..out_ch {
             // 16 corner values
-            let v0000 = clut.data.get(idx(i0, i1, i2, i3) + ch).copied().unwrap_or(0.0);
-            let v0001 = clut.data.get(idx(i0, i1, i2, i3_1) + ch).copied().unwrap_or(0.0);
-            let v0010 = clut.data.get(idx(i0, i1, i2_1, i3) + ch).copied().unwrap_or(0.0);
-            let v0011 = clut.data.get(idx(i0, i1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
-            let v0100 = clut.data.get(idx(i0, i1_1, i2, i3) + ch).copied().unwrap_or(0.0);
-            let v0101 = clut.data.get(idx(i0, i1_1, i2, i3_1) + ch).copied().unwrap_or(0.0);
-            let v0110 = clut.data.get(idx(i0, i1_1, i2_1, i3) + ch).copied().unwrap_or(0.0);
-            let v0111 = clut.data.get(idx(i0, i1_1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
-            let v1000 = clut.data.get(idx(i0_1, i1, i2, i3) + ch).copied().unwrap_or(0.0);
-            let v1001 = clut.data.get(idx(i0_1, i1, i2, i3_1) + ch).copied().unwrap_or(0.0);
-            let v1010 = clut.data.get(idx(i0_1, i1, i2_1, i3) + ch).copied().unwrap_or(0.0);
-            let v1011 = clut.data.get(idx(i0_1, i1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
-            let v1100 = clut.data.get(idx(i0_1, i1_1, i2, i3) + ch).copied().unwrap_or(0.0);
-            let v1101 = clut.data.get(idx(i0_1, i1_1, i2, i3_1) + ch).copied().unwrap_or(0.0);
-            let v1110 = clut.data.get(idx(i0_1, i1_1, i2_1, i3) + ch).copied().unwrap_or(0.0);
-            let v1111 = clut.data.get(idx(i0_1, i1_1, i2_1, i3_1) + ch).copied().unwrap_or(0.0);
+            let v0000 = clut
+                .data
+                .get(idx(i0, i1, i2, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0001 = clut
+                .data
+                .get(idx(i0, i1, i2, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0010 = clut
+                .data
+                .get(idx(i0, i1, i2_1, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0011 = clut
+                .data
+                .get(idx(i0, i1, i2_1, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0100 = clut
+                .data
+                .get(idx(i0, i1_1, i2, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0101 = clut
+                .data
+                .get(idx(i0, i1_1, i2, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0110 = clut
+                .data
+                .get(idx(i0, i1_1, i2_1, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v0111 = clut
+                .data
+                .get(idx(i0, i1_1, i2_1, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1000 = clut
+                .data
+                .get(idx(i0_1, i1, i2, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1001 = clut
+                .data
+                .get(idx(i0_1, i1, i2, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1010 = clut
+                .data
+                .get(idx(i0_1, i1, i2_1, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1011 = clut
+                .data
+                .get(idx(i0_1, i1, i2_1, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1100 = clut
+                .data
+                .get(idx(i0_1, i1_1, i2, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1101 = clut
+                .data
+                .get(idx(i0_1, i1_1, i2, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1110 = clut
+                .data
+                .get(idx(i0_1, i1_1, i2_1, i3) + ch)
+                .copied()
+                .unwrap_or(0.0);
+            let v1111 = clut
+                .data
+                .get(idx(i0_1, i1_1, i2_1, i3_1) + ch)
+                .copied()
+                .unwrap_or(0.0);
 
             // Interpolate along dimension 3 (K)
             let v000 = v0000 + f3 * (v0001 - v0000);

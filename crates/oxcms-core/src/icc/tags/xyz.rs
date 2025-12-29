@@ -21,9 +21,7 @@ impl XyzTagData {
     pub fn parse(data: &[u8]) -> Result<Self, IccError> {
         // Each XYZNumber is 12 bytes (3 × s15Fixed16)
         if data.len() < 12 {
-            return Err(IccError::CorruptedData(
-                "XYZ tag too small".to_string(),
-            ));
+            return Err(IccError::CorruptedData("XYZ tag too small".to_string()));
         }
 
         let count = data.len() / 12;

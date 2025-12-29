@@ -7,7 +7,7 @@
 //! - a*: Green-red axis (negative = green, positive = red)
 //! - b*: Blue-yellow axis (negative = blue, positive = yellow)
 
-use crate::color::{WhitePoint, Xyz, D50};
+use crate::color::{D50, WhitePoint, Xyz};
 
 /// CIELAB color coordinates
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -99,11 +99,7 @@ impl Lab {
     #[inline]
     pub fn hue_degrees(&self) -> f64 {
         let h = self.hue().to_degrees();
-        if h < 0.0 {
-            h + 360.0
-        } else {
-            h
-        }
+        if h < 0.0 { h + 360.0 } else { h }
     }
 
     /// Check if approximately equal to another Lab color
@@ -173,22 +169,14 @@ pub fn delta_e_2000(lab1: Lab, lab2: Lab) -> f64 {
         0.0
     } else {
         let h = b1.atan2(a1_prime).to_degrees();
-        if h < 0.0 {
-            h + 360.0
-        } else {
-            h
-        }
+        if h < 0.0 { h + 360.0 } else { h }
     };
 
     let h2_prime = if a2_prime == 0.0 && b2 == 0.0 {
         0.0
     } else {
         let h = b2.atan2(a2_prime).to_degrees();
-        if h < 0.0 {
-            h + 360.0
-        } else {
-            h
-        }
+        if h < 0.0 { h + 360.0 } else { h }
     };
 
     // Step 2: Calculate deltas

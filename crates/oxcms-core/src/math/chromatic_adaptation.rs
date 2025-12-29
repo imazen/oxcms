@@ -169,7 +169,12 @@ pub fn adapt_xyz(
 /// Adapt an XYZ color using Bradford adaptation (convenience function)
 #[inline]
 pub fn adapt_xyz_bradford(xyz: Xyz, src_white: &WhitePoint, dst_white: &WhitePoint) -> Xyz {
-    adapt_xyz(xyz, src_white, dst_white, ChromaticAdaptationMethod::Bradford)
+    adapt_xyz(
+        xyz,
+        src_white,
+        dst_white,
+        ChromaticAdaptationMethod::Bradford,
+    )
 }
 
 /// Pre-computed D65 → D50 Bradford matrix
@@ -253,8 +258,7 @@ mod tests {
 
     #[test]
     fn test_xyz_scaling() {
-        let matrix =
-            adaptation_matrix(&D65, &D50, ChromaticAdaptationMethod::XyzScaling);
+        let matrix = adaptation_matrix(&D65, &D50, ChromaticAdaptationMethod::XyzScaling);
 
         // XYZ scaling is a diagonal matrix
         assert!(matrix.m[0][1].abs() < EPSILON);

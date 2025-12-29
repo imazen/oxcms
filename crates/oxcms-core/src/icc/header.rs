@@ -70,9 +70,8 @@ impl IccHeader {
             patch: data[9] & 0x0F,
         };
 
-        let device_class = ProfileClass::from_u32(u32::from_be_bytes([
-            data[12], data[13], data[14], data[15],
-        ]))?;
+        let device_class =
+            ProfileClass::from_u32(u32::from_be_bytes([data[12], data[13], data[14], data[15]]))?;
 
         let color_space =
             ColorSpace::from_u32(u32::from_be_bytes([data[16], data[17], data[18], data[19]]))?;
@@ -80,8 +79,7 @@ impl IccHeader {
         let pcs =
             ColorSpace::from_u32(u32::from_be_bytes([data[20], data[21], data[22], data[23]]))?;
 
-        let creation_date =
-            DateTimeNumber::from_bytes(&data[24..36]).unwrap_or_default();
+        let creation_date = DateTimeNumber::from_bytes(&data[24..36]).unwrap_or_default();
 
         let signature = u32::from_be_bytes([data[36], data[37], data[38], data[39]]);
 
@@ -352,8 +350,16 @@ impl ColorSpace {
         match self {
             Self::Gray => 1,
             Self::Color2 => 2,
-            Self::Xyz | Self::Lab | Self::Luv | Self::YCbCr | Self::Yxy | Self::Rgb
-            | Self::Hsv | Self::Hls | Self::Cmy | Self::Color3 => 3,
+            Self::Xyz
+            | Self::Lab
+            | Self::Luv
+            | Self::YCbCr
+            | Self::Yxy
+            | Self::Rgb
+            | Self::Hsv
+            | Self::Hls
+            | Self::Cmy
+            | Self::Color3 => 3,
             Self::Cmyk | Self::Color4 => 4,
             Self::Color5 => 5,
             Self::Color6 => 6,
