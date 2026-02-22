@@ -181,7 +181,7 @@ pub enum skcms_AlphaFormat {
     PremulAsEncoded = 2,
 }
 
-extern "C" {
+unsafe extern "C" {
     // Matrix operations
     pub fn skcms_Matrix3x3_invert(src: *const skcms_Matrix3x3, dst: *mut skcms_Matrix3x3) -> bool;
     pub fn skcms_Matrix3x3_concat(
