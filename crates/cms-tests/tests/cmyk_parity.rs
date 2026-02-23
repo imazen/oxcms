@@ -837,9 +837,9 @@ fn test_pure_yellow_axis_cross_cms() {
 
     // The failing pure yellow cases (C=0, M=0, K=0, Y varies)
     let yellow_values: Vec<[u8; 4]> = vec![
-        [0, 0, 0, 0],   // White (baseline)
-        [0, 0, 32, 0],  // Light yellow
-        [0, 0, 64, 0],  // Failing case
+        [0, 0, 0, 0],  // White (baseline)
+        [0, 0, 32, 0], // Light yellow
+        [0, 0, 64, 0], // Failing case
         [0, 0, 96, 0],
         [0, 0, 128, 0], // Failing case
         [0, 0, 160, 0],
@@ -874,9 +874,10 @@ fn test_pure_yellow_axis_cross_cms() {
 
         let calc_diff = |a: Option<[u8; 3]>, b: Option<[u8; 3]>| -> i16 {
             match (a, b) {
-                (Some(a), Some(b)) => {
-                    (0..3).map(|i| (a[i] as i16 - b[i] as i16).abs()).max().unwrap_or(0)
-                }
+                (Some(a), Some(b)) => (0..3)
+                    .map(|i| (a[i] as i16 - b[i] as i16).abs())
+                    .max()
+                    .unwrap_or(0),
                 _ => -1,
             }
         };
@@ -901,7 +902,9 @@ fn test_pure_yellow_axis_cross_cms() {
         );
     }
 
-    println!("\nNote: skcms uses inverted CMYK (Photoshop convention), so inputs are pre-inverted.");
+    println!(
+        "\nNote: skcms uses inverted CMYK (Photoshop convention), so inputs are pre-inverted."
+    );
     println!("Δ columns show max channel difference vs lcms2.");
 }
 
@@ -932,7 +935,12 @@ fn transform_moxcms_single_default(profile_data: &[u8], cmyk: [u8; 4]) -> Option
     let srgb = ColorProfile::new_srgb();
 
     let transform = cmyk_profile
-        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .create_transform_8bit(
+            Layout::Rgba,
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
         .ok()?;
 
     let mut rgb = [0u8; 3];

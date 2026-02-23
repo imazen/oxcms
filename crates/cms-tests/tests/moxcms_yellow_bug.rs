@@ -50,7 +50,12 @@ fn test_moxcms_pure_yellow_bug() {
         let srgb = ColorProfile::new_srgb();
 
         let transform = cmyk_profile
-            .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+            .create_transform_8bit(
+                Layout::Rgba,
+                &srgb,
+                Layout::Rgb,
+                TransformOptions::default(),
+            )
             .unwrap();
 
         let mut rgb = [0u8; 3];
@@ -72,7 +77,8 @@ fn test_moxcms_pure_yellow_bug() {
             &srgb,
             PixelFormat::RGB_8,
             Intent::Perceptual,
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut rgb = [0u8; 3];
         transform.transform_pixels(slice::from_ref(&cmyk_input), slice::from_mut(&mut rgb));
@@ -107,7 +113,10 @@ fn test_moxcms_yellow_bug_scaling() {
     let profile_data = std::fs::read(&profile_path).expect("USWebCoatedSWOP.icc required");
 
     println!("\n=== moxcms Yellow Bug: Scaling with Y value ===\n");
-    println!("{:<12} {:>12} {:>12} {:>8}", "CMYK[Y]", "lcms2 G", "moxcms G", "Δ");
+    println!(
+        "{:<12} {:>12} {:>12} {:>8}",
+        "CMYK[Y]", "lcms2 G", "moxcms G", "Δ"
+    );
     println!("{}", "-".repeat(48));
 
     let mut max_diff = 0i16;
@@ -121,7 +130,12 @@ fn test_moxcms_yellow_bug_scaling() {
             let cmyk_profile = ColorProfile::new_from_slice(&profile_data).unwrap();
             let srgb = ColorProfile::new_srgb();
             let transform = cmyk_profile
-                .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+                .create_transform_8bit(
+                    Layout::Rgba,
+                    &srgb,
+                    Layout::Rgb,
+                    TransformOptions::default(),
+                )
                 .unwrap();
             let mut rgb = [0u8; 3];
             transform.transform(&cmyk, &mut rgb).unwrap();
@@ -135,10 +149,13 @@ fn test_moxcms_yellow_bug_scaling() {
             let cmyk_profile = Profile::new_icc(&profile_data).unwrap();
             let srgb = Profile::new_srgb();
             let transform = Transform::<[u8; 4], [u8; 3]>::new(
-                &cmyk_profile, PixelFormat::CMYK_8,
-                &srgb, PixelFormat::RGB_8,
+                &cmyk_profile,
+                PixelFormat::CMYK_8,
+                &srgb,
+                PixelFormat::RGB_8,
                 Intent::Perceptual,
-            ).unwrap();
+            )
+            .unwrap();
             let mut rgb = [0u8; 3];
             transform.transform_pixels(slice::from_ref(&cmyk), slice::from_mut(&mut rgb));
             rgb[1]
@@ -149,7 +166,10 @@ fn test_moxcms_yellow_bug_scaling() {
             max_diff = diff;
         }
 
-        println!("[0,0,{:3},0] {:>12} {:>12} {:>8}", y, lcms2_g, moxcms_g, diff);
+        println!(
+            "[0,0,{:3},0] {:>12} {:>12} {:>8}",
+            y, lcms2_g, moxcms_g, diff
+        );
     }
 
     println!("\nMax green channel difference: {}", max_diff);

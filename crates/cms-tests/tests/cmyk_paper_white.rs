@@ -159,14 +159,21 @@ fn test_moxcms_lcms2_paper_white_agreement() {
     let b_diff = (moxcms_rgb[2] as i16 - lcms2_rgb[2] as i16).abs();
     let max_diff = r_diff.max(g_diff).max(b_diff);
 
-    eprintln!("\nmoxcms vs lcms2 difference: R={}, G={}, B={}", r_diff, g_diff, b_diff);
+    eprintln!(
+        "\nmoxcms vs lcms2 difference: R={}, G={}, B={}",
+        r_diff, g_diff, b_diff
+    );
 
     assert!(
         max_diff <= 1,
         "moxcms should match lcms2 for CMYK paper white. \
          Got moxcms [{},{},{}] vs lcms2 [{},{},{}] (diff={}).",
-        moxcms_rgb[0], moxcms_rgb[1], moxcms_rgb[2],
-        lcms2_rgb[0], lcms2_rgb[1], lcms2_rgb[2],
+        moxcms_rgb[0],
+        moxcms_rgb[1],
+        moxcms_rgb[2],
+        lcms2_rgb[0],
+        lcms2_rgb[1],
+        lcms2_rgb[2],
         max_diff
     );
 
@@ -178,7 +185,10 @@ fn test_moxcms_lcms2_paper_white_agreement() {
             .unwrap_or(0);
 
         if skcms_diff > 0 {
-            eprintln!("\nNOTE: skcms differs from lcms2/moxcms by {} units.", skcms_diff);
+            eprintln!(
+                "\nNOTE: skcms differs from lcms2/moxcms by {} units.",
+                skcms_diff
+            );
             eprintln!("This explains the jxl-rs vs libjxl parity gap for CMYK images.");
         }
     }
@@ -221,7 +231,10 @@ fn test_lcms2_skcms_paper_white_difference() {
         if max_diff > 0 {
             eprintln!("\nNOTE: skcms produces a slightly different paper white than lcms2.");
             eprintln!("This is a known behavior difference, not a bug in either.");
-            eprintln!("Impact: libjxl (skcms) vs jxl-rs (moxcms) will differ by ~{} units.", max_diff);
+            eprintln!(
+                "Impact: libjxl (skcms) vs jxl-rs (moxcms) will differ by ~{} units.",
+                max_diff
+            );
         }
 
         // This is informational - we just document the difference
@@ -270,7 +283,10 @@ fn test_nearwhite_cmyk_values() {
     ];
 
     eprintln!("\n=== Near-White CMYK Comparison ===\n");
-    eprintln!("{:<30} {:>12} {:>12} {:>12} {:>8}", "Test Case", "moxcms", "lcms2", "skcms", "Δmax");
+    eprintln!(
+        "{:<30} {:>12} {:>12} {:>12} {:>8}",
+        "Test Case", "moxcms", "lcms2", "skcms", "Δmax"
+    );
     eprintln!("{}", "-".repeat(78));
 
     let mut max_moxcms_error = 0i16;
@@ -302,7 +318,10 @@ fn test_nearwhite_cmyk_values() {
             "-".to_string()
         };
 
-        eprintln!("{:<30} {:>12} {:>12} {:>12} {:>8}", name, m_str, l_str, s_str, diff);
+        eprintln!(
+            "{:<30} {:>12} {:>12} {:>12} {:>8}",
+            name, m_str, l_str, s_str, diff
+        );
     }
 
     eprintln!("\nMax moxcms error vs lcms2: {}", max_moxcms_error);
@@ -310,7 +329,10 @@ fn test_nearwhite_cmyk_values() {
     // Document findings - moxcms should be close to lcms2
     // For saturated colors, small differences are expected due to interpolation
     if max_moxcms_error > 5 {
-        eprintln!("WARNING: Large difference ({}) between moxcms and lcms2!", max_moxcms_error);
+        eprintln!(
+            "WARNING: Large difference ({}) between moxcms and lcms2!",
+            max_moxcms_error
+        );
         eprintln!("This may indicate an interpolation or CLUT lookup issue.");
     }
 }

@@ -30,15 +30,19 @@ fn assets_dir() -> PathBuf {
 #[test]
 fn test_nearwhite_cmyk_8bit() {
     let profile_path = assets_dir().join("cmyk_layers.icc");
-    let profile_data = std::fs::read(&profile_path)
-        .expect("cmyk_layers.icc required in assets/");
+    let profile_data = std::fs::read(&profile_path).expect("cmyk_layers.icc required in assets/");
 
-    let cmyk_profile = ColorProfile::new_from_slice(&profile_data)
-        .expect("Failed to parse CMYK profile");
+    let cmyk_profile =
+        ColorProfile::new_from_slice(&profile_data).expect("Failed to parse CMYK profile");
     let srgb = ColorProfile::new_srgb();
 
     let transform = cmyk_profile
-        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .create_transform_8bit(
+            Layout::Rgba,
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
         .expect("Failed to create transform");
 
     println!("\n=== Near-White CMYK Test (8-bit) ===\n");
@@ -48,17 +52,17 @@ fn test_nearwhite_cmyk_8bit() {
     // Test various near-white CMYK values
     // Format: [C, M, Y, K] in 0-255 scale
     let test_cases: &[[u8; 4]] = &[
-        [0, 0, 0, 0],   // Pure white - should be [255,255,255]
-        [1, 0, 0, 0],   // Tiny cyan
-        [0, 1, 0, 0],   // Tiny magenta
-        [0, 0, 1, 0],   // Tiny yellow
-        [1, 1, 0, 0],   // Tiny blue (C+M)
-        [1, 0, 1, 0],   // Tiny green (C+Y)
-        [0, 1, 1, 0],   // Tiny red (M+Y)
-        [2, 1, 0, 0],   // Slight blue - should NOT be pure white
-        [3, 1, 0, 0],   // More blue
-        [5, 2, 0, 0],   // ~2% C, 0.8% M
-        [10, 5, 2, 0],  // Low saturation
+        [0, 0, 0, 0],  // Pure white - should be [255,255,255]
+        [1, 0, 0, 0],  // Tiny cyan
+        [0, 1, 0, 0],  // Tiny magenta
+        [0, 0, 1, 0],  // Tiny yellow
+        [1, 1, 0, 0],  // Tiny blue (C+M)
+        [1, 0, 1, 0],  // Tiny green (C+Y)
+        [0, 1, 1, 0],  // Tiny red (M+Y)
+        [2, 1, 0, 0],  // Slight blue - should NOT be pure white
+        [3, 1, 0, 0],  // More blue
+        [5, 2, 0, 0],  // ~2% C, 0.8% M
+        [10, 5, 2, 0], // Low saturation
     ];
 
     let mut clipped_count = 0;
@@ -74,13 +78,22 @@ fn test_nearwhite_cmyk_8bit() {
 
         println!(
             "[{:3},{:3},{:3},{:3}] [{:3},{:3},{:3}]  {}",
-            cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-            rgb[0], rgb[1], rgb[2],
+            cmyk[0],
+            cmyk[1],
+            cmyk[2],
+            cmyk[3],
+            rgb[0],
+            rgb[1],
+            rgb[2],
             if is_clipped { "<-- CLIPPED!" } else { "" }
         );
     }
 
-    println!("\nClipped to pure white: {}/{}", clipped_count, test_cases.len() - 1);
+    println!(
+        "\nClipped to pure white: {}/{}",
+        clipped_count,
+        test_cases.len() - 1
+    );
 
     // Non-zero CMYK should never produce pure white
     assert_eq!(
@@ -95,15 +108,19 @@ fn test_nearwhite_cmyk_8bit() {
 #[test]
 fn test_nearwhite_cmyk_f32() {
     let profile_path = assets_dir().join("cmyk_layers.icc");
-    let profile_data = std::fs::read(&profile_path)
-        .expect("cmyk_layers.icc required in assets/");
+    let profile_data = std::fs::read(&profile_path).expect("cmyk_layers.icc required in assets/");
 
-    let cmyk_profile = ColorProfile::new_from_slice(&profile_data)
-        .expect("Failed to parse CMYK profile");
+    let cmyk_profile =
+        ColorProfile::new_from_slice(&profile_data).expect("Failed to parse CMYK profile");
     let srgb = ColorProfile::new_srgb();
 
     let transform = cmyk_profile
-        .create_transform_f32(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .create_transform_f32(
+            Layout::Rgba,
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
         .expect("Failed to create transform");
 
     println!("\n=== Near-White CMYK Test (f32) ===\n");
@@ -113,13 +130,13 @@ fn test_nearwhite_cmyk_f32() {
     // Test with f32 values - more precision for near-white
     // These are ICC convention: 0.0 = no ink, 1.0 = full ink
     let test_cases: &[[f32; 4]] = &[
-        [0.0, 0.0, 0.0, 0.0],     // Pure white
-        [0.01, 0.0, 0.0, 0.0],    // 1% cyan
-        [0.0, 0.01, 0.0, 0.0],    // 1% magenta
-        [0.0, 0.0, 0.01, 0.0],    // 1% yellow
-        [0.01, 0.005, 0.0, 0.0],  // ~1% C, 0.5% M -> should be slight blue tint
-        [0.02, 0.01, 0.0, 0.0],   // ~2% C, 1% M -> more blue
-        [0.05, 0.02, 0.01, 0.0],  // Mixed low ink
+        [0.0, 0.0, 0.0, 0.0],    // Pure white
+        [0.01, 0.0, 0.0, 0.0],   // 1% cyan
+        [0.0, 0.01, 0.0, 0.0],   // 1% magenta
+        [0.0, 0.0, 0.01, 0.0],   // 1% yellow
+        [0.01, 0.005, 0.0, 0.0], // ~1% C, 0.5% M -> should be slight blue tint
+        [0.02, 0.01, 0.0, 0.0],  // ~2% C, 1% M -> more blue
+        [0.05, 0.02, 0.01, 0.0], // Mixed low ink
     ];
 
     let mut issues = Vec::new();
@@ -142,9 +159,16 @@ fn test_nearwhite_cmyk_f32() {
 
         println!(
             "[{:.3},{:.3},{:.3},{:.3}] [{:.3},{:.3},{:.3}] -> [{:3},{:3},{:3}] {}",
-            cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-            rgb[0], rgb[1], rgb[2],
-            rgb_u8[0], rgb_u8[1], rgb_u8[2],
+            cmyk[0],
+            cmyk[1],
+            cmyk[2],
+            cmyk[3],
+            rgb[0],
+            rgb[1],
+            rgb[2],
+            rgb_u8[0],
+            rgb_u8[1],
+            rgb_u8[2],
             if is_clipped { "<-- CLIPPED!" } else { "" }
         );
     }
@@ -152,7 +176,10 @@ fn test_nearwhite_cmyk_f32() {
     if !issues.is_empty() {
         println!("\n{} values clipped to white:", issues.len());
         for cmyk in &issues {
-            println!("  [{:.3},{:.3},{:.3},{:.3}]", cmyk[0], cmyk[1], cmyk[2], cmyk[3]);
+            println!(
+                "  [{:.3},{:.3},{:.3},{:.3}]",
+                cmyk[0], cmyk[1], cmyk[2], cmyk[3]
+            );
         }
     }
 
@@ -176,27 +203,45 @@ fn test_nearwhite_compare_profiles() {
     let srgb = ColorProfile::new_srgb();
     let test_cmyk: [u8; 4] = [5, 2, 0, 0]; // ~2% C, 0.8% M
 
-    println!("\n=== Profile Comparison for CMYK [{},{},{},{}] ===\n",
-             test_cmyk[0], test_cmyk[1], test_cmyk[2], test_cmyk[3]);
+    println!(
+        "\n=== Profile Comparison for CMYK [{},{},{},{}] ===\n",
+        test_cmyk[0], test_cmyk[1], test_cmyk[2], test_cmyk[3]
+    );
 
     if let Some(data) = cmyk_layers_data {
         let profile = ColorProfile::new_from_slice(&data).expect("parse cmyk_layers.icc");
         let transform = profile
-            .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+            .create_transform_8bit(
+                Layout::Rgba,
+                &srgb,
+                Layout::Rgb,
+                TransformOptions::default(),
+            )
             .expect("create transform");
         let mut rgb = [0u8; 3];
         transform.transform(&test_cmyk, &mut rgb).unwrap();
-        println!("cmyk_layers.icc:   RGB [{:3},{:3},{:3}]", rgb[0], rgb[1], rgb[2]);
+        println!(
+            "cmyk_layers.icc:   RGB [{:3},{:3},{:3}]",
+            rgb[0], rgb[1], rgb[2]
+        );
     }
 
     if let Some(data) = us_swop_data {
         let profile = ColorProfile::new_from_slice(&data).expect("parse us_swop_coated.icc");
         let transform = profile
-            .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+            .create_transform_8bit(
+                Layout::Rgba,
+                &srgb,
+                Layout::Rgb,
+                TransformOptions::default(),
+            )
             .expect("create transform");
         let mut rgb = [0u8; 3];
         transform.transform(&test_cmyk, &mut rgb).unwrap();
-        println!("us_swop_coated.icc: RGB [{:3},{:3},{:3}]", rgb[0], rgb[1], rgb[2]);
+        println!(
+            "us_swop_coated.icc: RGB [{:3},{:3},{:3}]",
+            rgb[0], rgb[1], rgb[2]
+        );
     }
 
     // Both should produce similar near-white values, not pure white
@@ -208,15 +253,19 @@ fn test_nearwhite_compare_profiles() {
 #[test]
 fn test_paper_white_behavior() {
     let profile_path = assets_dir().join("cmyk_layers.icc");
-    let profile_data = std::fs::read(&profile_path)
-        .expect("cmyk_layers.icc required in assets/");
+    let profile_data = std::fs::read(&profile_path).expect("cmyk_layers.icc required in assets/");
 
-    let cmyk_profile = ColorProfile::new_from_slice(&profile_data)
-        .expect("Failed to parse CMYK profile");
+    let cmyk_profile =
+        ColorProfile::new_from_slice(&profile_data).expect("Failed to parse CMYK profile");
     let srgb = ColorProfile::new_srgb();
 
     let transform = cmyk_profile
-        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .create_transform_8bit(
+            Layout::Rgba,
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
         .expect("Failed to create transform");
 
     // CMYK [0,0,0,0] = no ink = paper white

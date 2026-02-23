@@ -24,10 +24,10 @@ fn assets_dir() -> PathBuf {
 /// Reference values from lcms2 for pure yellow axis [0,0,Y,0] -> RGB
 /// Format: (Y_value, expected_R, expected_G, expected_B)
 const LCMS2_REFERENCE: &[(u8, u8, u8, u8)] = &[
-    (0,   255, 255, 255),
-    (32,  255, 253, 228),
-    (64,  255, 251, 204),
-    (96,  255, 249, 178),
+    (0, 255, 255, 255),
+    (32, 255, 253, 228),
+    (64, 255, 251, 204),
+    (96, 255, 249, 178),
     (128, 255, 247, 153),
     (160, 255, 246, 127),
     (192, 255, 244, 94),
@@ -38,19 +38,27 @@ const LCMS2_REFERENCE: &[(u8, u8, u8, u8)] = &[
 #[test]
 fn test_pure_yellow_green_channel() {
     let profile_path = assets_dir().join("us_swop_coated.icc");
-    let profile_data = std::fs::read(&profile_path)
-        .expect("us_swop_coated.icc required in assets/");
+    let profile_data =
+        std::fs::read(&profile_path).expect("us_swop_coated.icc required in assets/");
 
-    let cmyk_profile = ColorProfile::new_from_slice(&profile_data)
-        .expect("Failed to parse CMYK profile");
+    let cmyk_profile =
+        ColorProfile::new_from_slice(&profile_data).expect("Failed to parse CMYK profile");
     let srgb = ColorProfile::new_srgb();
 
     let transform = cmyk_profile
-        .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, TransformOptions::default())
+        .create_transform_8bit(
+            Layout::Rgba,
+            &srgb,
+            Layout::Rgb,
+            TransformOptions::default(),
+        )
         .expect("Failed to create transform");
 
     println!("\n=== Pure Yellow Axis Test ===\n");
-    println!("{:<12} {:>10} {:>10} {:>6}", "CMYK[Y]", "expected", "actual", "Δ");
+    println!(
+        "{:<12} {:>10} {:>10} {:>6}",
+        "CMYK[Y]", "expected", "actual", "Δ"
+    );
     println!("{}", "-".repeat(42));
 
     let mut max_diff = 0i16;
@@ -81,7 +89,10 @@ fn test_pure_yellow_green_channel() {
     if !failures.is_empty() {
         println!("\nFailing cases (Δ > 1):");
         for (y, expected, actual, diff) in &failures {
-            println!("  Y={}: expected G={}, got G={}, Δ={}", y, expected, actual, diff);
+            println!(
+                "  Y={}: expected G={}, got G={}, Δ={}",
+                y, expected, actual, diff
+            );
         }
     }
 
@@ -113,7 +124,9 @@ fn test_yellow_bug_interpolation_independent() {
         .create_transform_8bit(Layout::Rgba, &srgb, Layout::Rgb, default_opts)
         .unwrap();
     let mut rgb_default = [0u8; 3];
-    transform_default.transform(&cmyk, &mut rgb_default).unwrap();
+    transform_default
+        .transform(&cmyk, &mut rgb_default)
+        .unwrap();
 
     // Test with tetrahedral
     let tet_opts = TransformOptions {
@@ -144,6 +157,8 @@ fn test_yellow_bug_interpolation_independent() {
     assert!(
         diff <= 1,
         "Green channel {} differs from lcms2 reference {} by {} (both interpolation methods)",
-        rgb_default[1], expected_g, diff
+        rgb_default[1],
+        expected_g,
+        diff
     );
 }

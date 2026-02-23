@@ -131,7 +131,7 @@ const NEGATIVE_XYZ_PROFILES: &[&str] = &[
     "DisplayP3-v2-micro.icc",
     "DisplayP3-v2-magic.icc",
     "DisplayP3-v4.icc",
-    "DCI-P3-v4.icc",  // Also has negative red Z
+    "DCI-P3-v4.icc", // Also has negative red Z
     "Rec2020-v2-micro.icc",
     "Rec2020-v2-magic.icc",
     "Rec2020-v4.icc",
@@ -269,7 +269,10 @@ fn test_negative_xyz_values() {
     }
 
     println!();
-    println!("Profiles with negative XYZ values: {}", negative_values_found.len());
+    println!(
+        "Profiles with negative XYZ values: {}",
+        negative_values_found.len()
+    );
 
     // Check that the known negative profiles actually have negative values
     for name in NEGATIVE_XYZ_PROFILES {
@@ -302,8 +305,8 @@ fn test_display_p3_negative_z() {
     // This is mathematically correct but some strict ICC implementations reject it
 
     let profiles = [
-        ("DisplayP3-v2-micro.icc", true),  // Should have negative Z
-        ("DisplayP3-v4.icc", true),         // Should have negative Z
+        ("DisplayP3-v2-micro.icc", true),        // Should have negative Z
+        ("DisplayP3-v4.icc", true),              // Should have negative Z
         ("DisplayP3Compat-v2-micro.icc", false), // Should NOT have negative Z
         ("DisplayP3Compat-v4.icc", false),       // Should NOT have negative Z
     ];
@@ -335,8 +338,8 @@ fn test_rec2020_negative_z() {
     println!("\n=== Rec2020 Negative Z Analysis ===\n");
 
     let profiles = [
-        ("Rec2020-v2-micro.icc", true),  // Should have negative Z
-        ("Rec2020-v4.icc", true),         // Should have negative Z
+        ("Rec2020-v2-micro.icc", true),        // Should have negative Z
+        ("Rec2020-v4.icc", true),              // Should have negative Z
         ("Rec2020Compat-v2-micro.icc", false), // Should NOT have negative Z
         ("Rec2020Compat-v4.icc", false),       // Should NOT have negative Z
     ];
@@ -397,7 +400,11 @@ fn test_transforms_rgb_to_srgb() {
                             let mut output = [0u8; 3];
 
                             if let Err(e) = transform.transform(&input, &mut output) {
-                                transform_failures.push((name.clone(), color_name, format!("{:?}", e)));
+                                transform_failures.push((
+                                    name.clone(),
+                                    color_name,
+                                    format!("{:?}", e),
+                                ));
                             }
                         }
                     }
@@ -464,7 +471,11 @@ fn test_transforms_srgb_to_profiles() {
                         }
                     }
                     Err(e) => {
-                        transform_failures.push((name.clone(), "create".to_string(), format!("{:?}", e)));
+                        transform_failures.push((
+                            name.clone(),
+                            "create".to_string(),
+                            format!("{:?}", e),
+                        ));
                     }
                 }
             }
@@ -563,10 +574,9 @@ fn test_white_point_consistency() {
                 );
 
                 // Check white point is close to D50
-                let d50_dist = ((wp.x - d50_x).powi(2)
-                    + (wp.y - d50_y).powi(2)
-                    + (wp.z - d50_z).powi(2))
-                .sqrt();
+                let d50_dist =
+                    ((wp.x - d50_x).powi(2) + (wp.y - d50_y).powi(2) + (wp.z - d50_z).powi(2))
+                        .sqrt();
 
                 if d50_dist > 0.01 {
                     println!("  Note: White point differs from D50 by {:.6}", d50_dist);
@@ -646,10 +656,10 @@ fn test_negative_xyz_transform_handling() {
         if let Some((name, data)) = load_profile(name) {
             if let Ok(profile) = ColorProfile::new_from_slice(&data) {
                 println!("Testing {}", name);
-                println!("  Red colorant: ({:.6}, {:.6}, {:.6})",
-                         profile.red_colorant.x,
-                         profile.red_colorant.y,
-                         profile.red_colorant.z);
+                println!(
+                    "  Red colorant: ({:.6}, {:.6}, {:.6})",
+                    profile.red_colorant.x, profile.red_colorant.y, profile.red_colorant.z
+                );
 
                 // Test transform creation
                 match profile.create_transform_8bit(
@@ -665,8 +675,10 @@ fn test_negative_xyz_transform_handling() {
 
                         match transform.transform(&input, &mut output) {
                             Ok(_) => {
-                                println!("  Pure red [255,0,0] -> [{},{},{}]",
-                                         output[0], output[1], output[2]);
+                                println!(
+                                    "  Pure red [255,0,0] -> [{},{},{}]",
+                                    output[0], output[1], output[2]
+                                );
 
                                 // Pure red from a wide gamut should map to sRGB red
                                 // or slightly clipped/saturated
