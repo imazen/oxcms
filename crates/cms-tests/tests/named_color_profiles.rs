@@ -4,7 +4,20 @@
 //! Named color profiles contain spot colors like Pantone, which can be
 //! looked up by name and mapped to device-independent PCS values.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Get the oxcms repo root directory.
+/// Override with OXCMS_ROOT env var.
+fn oxcms_root() -> PathBuf {
+    if let Ok(dir) = std::env::var("OXCMS_ROOT") {
+        return PathBuf::from(dir);
+    }
+    // Default: two levels up from crates/cms-tests
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+}
 
 /// Check if a profile is a named color profile by examining header bytes
 fn is_named_color_profile(data: &[u8]) -> bool {
@@ -65,7 +78,7 @@ fn test_read_existing_named_colors_xml() {
     eprintln!("\n=== Reading Named Color XML Definitions ===\n");
 
     // Read the XML files we downloaded from ICC DemoIccMAX
-    let xml_dir = Path::new("/home/lilith/oxcms/test-data/named-colors");
+    let xml_dir = oxcms_root().join("test-data/named-colors");
 
     if !xml_dir.exists() {
         eprintln!("  XML directory not found, skipping");
@@ -114,7 +127,7 @@ fn test_read_existing_named_colors_xml() {
 fn test_check_existing_profiles_for_named_colors() {
     eprintln!("\n=== Checking Existing Profiles for Named Colors ===\n");
 
-    let profiles_dir = Path::new("/home/lilith/oxcms/testdata/profiles");
+    let profiles_dir = oxcms_root().join("testdata/profiles");
 
     if !profiles_dir.exists() {
         eprintln!("  Profiles directory not found");
@@ -162,7 +175,7 @@ fn test_check_existing_profiles_for_named_colors() {
 fn test_profile_class_distribution() {
     eprintln!("\n=== Profile Class Distribution in Corpus ===\n");
 
-    let profiles_dir = Path::new("/home/lilith/oxcms/testdata/profiles");
+    let profiles_dir = oxcms_root().join("testdata/profiles");
 
     if !profiles_dir.exists() {
         eprintln!("  Profiles directory not found");
