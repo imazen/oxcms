@@ -460,10 +460,122 @@ fn bench_lut_u16(suite: &mut Suite) {
     }
 }
 
+// ── Wide-gamut matrix-shaper profiles: src→sRGB u8 ──────────────────────
+
+fn bench_matrix_profiles_u8(suite: &mut Suite) {
+    // Representative matrix-shaper profiles from the zenpixels collection.
+    // Each is a different gamut/TRC combination. All are src→sRGB transforms.
+    let profiles: &[(&str, &str)] = &[
+        // v2 profiles (widest compatibility)
+        ("compact-icc-DisplayP3Compat-v2-micro.icc", "P3_v2"),
+        ("compact-icc-Rec2020Compat-v2-micro.icc", "Rec2020_v2"),
+        ("compact-icc-AdobeCompat-v2.icc", "AdobeRGB_v2"),
+        ("compact-icc-ProPhoto-v2-micro.icc", "ProPhoto_v2"),
+        ("compact-icc-WideGamutCompat-v2.icc", "WideGamut_v2"),
+        ("compact-icc-Rec709-v2-micro.icc", "Rec709_v2"),
+        ("compact-icc-Rec601PAL-v2-micro.icc", "Rec601PAL_v2"),
+        ("compact-icc-AppleCompat-v2.icc", "AppleRGB_v2"),
+        ("compact-icc-ColorMatchCompat-v2.icc", "ColorMatch_v2"),
+        // v4 profiles (moxcms/skcms/lcms2 support, not argyll)
+        ("compact-icc-DisplayP3-v4.icc", "P3_v4"),
+        ("compact-icc-Rec2020-v4.icc", "Rec2020_v4"),
+        ("compact-icc-ProPhoto-v4.icc", "ProPhoto_v4"),
+        // moxcms built-in profiles (canonical references)
+        ("moxcms_display_p3.icc", "moxP3"),
+        ("moxcms_bt.2020.icc", "moxBT2020"),
+        // System-installed profiles
+        ("installed-linux-x64-AdobeRGB1998.icc", "sysAdobeRGB"),
+        // HDR profiles
+        ("moxcms_bt.2020_pq.icc", "BT2020_PQ"),
+        ("moxcms_display_p3_pq.icc", "P3_PQ"),
+        ("moxcms_bt.2020_hlg.icc", "BT2020_HLG"),
+    ];
+
+    let npix = 65536usize;
+
+    for &(filename, label) in profiles {
+        let icc_data = match load_profile(filename) {
+            Some(d) => d,
+            None => {
+                eprintln!("SKIP: {filename} not found");
+                continue;
+            }
+        };
+
+        suite.group(format!("{label}_u8_{npix}px"), |g| {
+            g.throughput(Throughput::Bytes((npix * 3) as u64));
+            let input = gen_rgb_u8(npix);
+
+            // moxcms
+            if let Ok(src) = moxcms::ColorProfile::new_from_slice(&icc_data) {
+                let dst = moxcms::ColorProfile::new_srgb();
+                if let Ok(xf) = src.create_transform_8bit(
+                    moxcms::Layout::Rgb,
+                    &dst,
+                    moxcms::Layout::Rgb,
+                    moxcms::TransformOptions::default(),
+                ) {
+                    let input = input.clone();
+                    g.bench("moxcms", move |b| {
+                        let mut out = vec![0u8; npix * 3];
+                        b.iter(|| {
+                            xf.transform(black_box(&input), black_box(&mut out))
+                                .unwrap();
+                        })
+                    });
+                }
+            }
+
+            // skcms
+            if let Some(sp) = SendProfile::parse(&icc_data) {
+                let srgb = SendProfile::srgb();
+                let input = input.clone();
+                g.bench("skcms", move |b| {
+                    let mut out = vec![0u8; npix * 3];
+                    b.iter(|| {
+                        skcms_sys::transform(
+                            black_box(&input),
+                            skcms_sys::skcms_PixelFormat::RGB_888,
+                            skcms_sys::skcms_AlphaFormat::Opaque,
+                            sp.get(),
+                            black_box(&mut out),
+                            skcms_sys::skcms_PixelFormat::RGB_888,
+                            skcms_sys::skcms_AlphaFormat::Opaque,
+                            srgb.get(),
+                            npix,
+                        );
+                    })
+                });
+            }
+
+            // lcms2
+            if let Ok(src) = lcms2::Profile::new_icc(&icc_data) {
+                let dst = lcms2::Profile::new_srgb();
+                if let Ok(xf) = lcms2::Transform::new(
+                    &src,
+                    lcms2::PixelFormat::RGB_8,
+                    &dst,
+                    lcms2::PixelFormat::RGB_8,
+                    lcms2::Intent::Perceptual,
+                ) {
+                    let input = input.clone();
+                    g.bench("lcms2", move |b| {
+                        let mut out = vec![0u8; npix * 3];
+                        b.iter(|| {
+                            xf.transform_pixels(black_box(&input), black_box(&mut out));
+                        })
+                    });
+                }
+            }
+        });
+    }
+}
+
 zenbench::main!(
     bench_srgb_identity_u8,
     bench_srgb_identity_u16,
     bench_srgb_identity_f32,
     bench_lut_u8,
     bench_lut_u16,
+    bench_matrix_profiles_u8,
 );
