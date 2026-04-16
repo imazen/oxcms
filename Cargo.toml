@@ -4,6 +4,7 @@ members = [
     "crates/oxcms-core",
     "crates/cms-tests",
     "crates/skcms-sys",
+    "crates/argyll-sys",
 ]
 
 [workspace.package]
@@ -18,6 +19,7 @@ moxcms = { path = "external/moxcms", features = ["options"] }
 lcms2 = "6"
 qcms = "0.3"
 skcms-sys = { path = "crates/skcms-sys" }
+argyll-sys = { path = "crates/argyll-sys" }
 
 # Color science
 palette = "0.7"

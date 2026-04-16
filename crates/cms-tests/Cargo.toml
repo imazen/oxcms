@@ -16,6 +16,7 @@ moxcms.workspace = true
 lcms2.workspace = true
 qcms.workspace = true
 skcms-sys.workspace = true
+argyll-sys.workspace = true
 
 # Color science for accuracy measurement
 palette.workspace = true
