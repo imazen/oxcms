@@ -1,7 +1,7 @@
 //! Brute-force CMS parity comparison across the full ICC profile corpus.
 //!
-//! Transforms a standardized u16 test ramp through moxcms, skcms, and lcms2
-//! for every parseable RGB profile, across:
+//! Transforms a standardized u16 test ramp through moxcms, skcms, lcms2,
+//! and ArgyllCMS for every parseable RGB profile, across:
 //!   - 2 rendering intents: Perceptual, Relative Colorimetric
 //!   - 2 moxcms interpolation methods: Linear (default), Tetrahedral
 //!
@@ -227,6 +227,26 @@ fn skcms_transform_u16(icc_data: &[u8], ramp: &[u16], intent: Intent) -> Option<
     if ok { Some(out) } else { None }
 }
 
+fn argyll_transform_u16(icc_data: &[u8], ramp: &[u16], intent: Intent) -> Option<Vec<u16>> {
+    let argyll_intent = match intent {
+        Intent::Perceptual => argyll_sys::Intent::Perceptual,
+        Intent::RelativeColorimetric => argyll_sys::Intent::RelativeColorimetric,
+    };
+
+    let npix = num_pixels(ramp);
+    let mut out = vec![0u16; ramp.len()];
+
+    let ok = argyll_sys::transform_u16(
+        icc_data,
+        argyll_sys::SRGB_ICC,
+        argyll_intent,
+        ramp,
+        &mut out,
+        npix,
+    );
+    if ok { Some(out) } else { None }
+}
+
 // ── Per-profile result ──────────────────────────────────────────────────
 
 #[derive(Default)]
@@ -234,7 +254,6 @@ struct ProfileResult {
     filename: String,
     #[allow(dead_code)]
     color_space: String,
-    // Each key is (intent, interp) → output u16 ramp (or None if transform failed)
     moxcms_default_perc: Option<Vec<u16>>,
     moxcms_default_relcol: Option<Vec<u16>>,
     moxcms_tetra_perc: Option<Vec<u16>>,
@@ -243,6 +262,8 @@ struct ProfileResult {
     lcms2_relcol: Option<Vec<u16>>,
     skcms_perc: Option<Vec<u16>>,
     skcms_relcol: Option<Vec<u16>>,
+    argyll_perc: Option<Vec<u16>>,
+    argyll_relcol: Option<Vec<u16>>,
 }
 
 // ── Report row ──────────────────────────────────────────────────────────
@@ -250,20 +271,30 @@ struct ProfileResult {
 struct ReportRow {
     filename: String,
     intent: Intent,
-    // max u16 diffs
+    // max u16 diffs (existing pairs)
     mox_def_vs_lcms2: Option<u32>,
     mox_tet_vs_lcms2: Option<u32>,
     mox_def_vs_skcms: Option<u32>,
     mox_tet_vs_skcms: Option<u32>,
     lcms2_vs_skcms: Option<u32>,
     mox_def_vs_tet: Option<u32>,
-    // mean diffs
+    // ArgyllCMS pairs
+    argyll_vs_lcms2: Option<u32>,
+    argyll_vs_skcms: Option<u32>,
+    argyll_vs_mox_def: Option<u32>,
+    argyll_vs_mox_tet: Option<u32>,
+    // mean diffs (existing)
     mox_def_vs_lcms2_mean: Option<f64>,
     mox_tet_vs_lcms2_mean: Option<f64>,
     mox_def_vs_skcms_mean: Option<f64>,
     mox_tet_vs_skcms_mean: Option<f64>,
     lcms2_vs_skcms_mean: Option<f64>,
     mox_def_vs_tet_mean: Option<f64>,
+    // ArgyllCMS means
+    argyll_vs_lcms2_mean: Option<f64>,
+    argyll_vs_skcms_mean: Option<f64>,
+    argyll_vs_mox_def_mean: Option<f64>,
+    argyll_vs_mox_tet_mean: Option<f64>,
 }
 
 fn diff_pair(a: &Option<Vec<u16>>, b: &Option<Vec<u16>>) -> (Option<u32>, Option<f64>) {
@@ -274,18 +305,20 @@ fn diff_pair(a: &Option<Vec<u16>>, b: &Option<Vec<u16>>) -> (Option<u32>, Option
 }
 
 fn compute_row(pr: &ProfileResult, intent: Intent) -> ReportRow {
-    let (mox_def, mox_tet, lcms2, skcms) = match intent {
+    let (mox_def, mox_tet, lcms2, skcms, argyll) = match intent {
         Intent::Perceptual => (
             &pr.moxcms_default_perc,
             &pr.moxcms_tetra_perc,
             &pr.lcms2_perc,
             &pr.skcms_perc,
+            &pr.argyll_perc,
         ),
         Intent::RelativeColorimetric => (
             &pr.moxcms_default_relcol,
             &pr.moxcms_tetra_relcol,
             &pr.lcms2_relcol,
             &pr.skcms_relcol,
+            &pr.argyll_relcol,
         ),
     };
 
@@ -295,6 +328,11 @@ fn compute_row(pr: &ProfileResult, intent: Intent) -> ReportRow {
     let (ts, tsm) = diff_pair(mox_tet, skcms);
     let (ls, lsm) = diff_pair(lcms2, skcms);
     let (dt, dtm) = diff_pair(mox_def, mox_tet);
+    // ArgyllCMS pairs
+    let (al, alm) = diff_pair(argyll, lcms2);
+    let (as_, asm) = diff_pair(argyll, skcms);
+    let (amd, amdm) = diff_pair(argyll, mox_def);
+    let (amt, amtm) = diff_pair(argyll, mox_tet);
 
     ReportRow {
         filename: pr.filename.clone(),
@@ -305,12 +343,20 @@ fn compute_row(pr: &ProfileResult, intent: Intent) -> ReportRow {
         mox_tet_vs_skcms: ts,
         lcms2_vs_skcms: ls,
         mox_def_vs_tet: dt,
+        argyll_vs_lcms2: al,
+        argyll_vs_skcms: as_,
+        argyll_vs_mox_def: amd,
+        argyll_vs_mox_tet: amt,
         mox_def_vs_lcms2_mean: dlm,
         mox_tet_vs_lcms2_mean: tlm,
         mox_def_vs_skcms_mean: dsm,
         mox_tet_vs_skcms_mean: tsm,
         lcms2_vs_skcms_mean: lsm,
         mox_def_vs_tet_mean: dtm,
+        argyll_vs_lcms2_mean: alm,
+        argyll_vs_skcms_mean: asm,
+        argyll_vs_mox_def_mean: amdm,
+        argyll_vs_mox_tet_mean: amtm,
     }
 }
 
@@ -328,6 +374,43 @@ fn fmt_opt_f64(v: Option<f64>) -> String {
     }
 }
 
+fn print_histogram(name: &str, vals: &[u32]) {
+    if vals.is_empty() {
+        eprintln!("  {name:<24} no data");
+        return;
+    }
+    let n = vals.len();
+    let exact = vals.iter().filter(|&&v| v == 0).count();
+    let le1 = vals.iter().filter(|&&v| v <= 1).count();
+    let le2 = vals.iter().filter(|&&v| v <= 2).count();
+    let le4 = vals.iter().filter(|&&v| v <= 4).count();
+    let le16 = vals.iter().filter(|&&v| v <= 16).count();
+    let le64 = vals.iter().filter(|&&v| v <= 64).count();
+    let le256 = vals.iter().filter(|&&v| v <= 256).count();
+    let le1024 = vals.iter().filter(|&&v| v <= 1024).count();
+    let max = *vals.iter().max().unwrap();
+    let mean: f64 = vals.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
+    let mut sorted = vals.to_vec();
+    sorted.sort();
+    let median = sorted[sorted.len() / 2];
+    let p95 = sorted[sorted.len() * 95 / 100];
+    let p99 = sorted[sorted.len() * 99 / 100];
+
+    eprintln!(
+        "  {name:<24} n={n:>4}  exact={exact:>4}  \u{2264}1={le1:>4}  \u{2264}2={le2:>4}  \u{2264}4={le4:>4}  \u{2264}16={le16:>4}  \u{2264}64={le64:>4}  \u{2264}256={le256:>4}  \u{2264}1024={le1024:>4}  max={max:>5}  mean={mean:>7.1}  med={median:>5}  p95={p95:>5}  p99={p99:>5}"
+    );
+}
+
+fn print_worst(name: &str, rows: &[(&str, u32)]) {
+    if rows.is_empty() {
+        return;
+    }
+    eprintln!("    {name}:");
+    for (fname, diff) in rows.iter().take(5) {
+        eprintln!("      {diff:>5} u16  {fname}");
+    }
+}
+
 // ── Main test ───────────────────────────────────────────────────────────
 
 #[test]
@@ -339,12 +422,12 @@ fn brute_force_corpus_parity() {
     eprintln!("Brute-force CMS parity comparison");
     eprintln!("  Profiles found: {}", profiles.len());
     eprintln!("  Test ramp: {} pixels ({} u16 values)", npix, ramp.len());
-    eprintln!("  Engines: moxcms (default+tetrahedral), lcms2, skcms");
+    eprintln!("  Engines: moxcms (default+tetrahedral), lcms2, skcms, ArgyllCMS");
     eprintln!("  Intents: perceptual, relative colorimetric");
     eprintln!();
 
     let mut results: Vec<ProfileResult> = Vec::new();
-    let mut parse_counts = BTreeMap::new();
+    let mut parse_counts: BTreeMap<&str, usize> = BTreeMap::new();
     let mut transform_fail_counts: BTreeMap<String, usize> = BTreeMap::new();
     let mut skipped_non_rgb = 0usize;
 
@@ -383,6 +466,7 @@ fn brute_force_corpus_parity() {
         let moxcms_ok = moxcms::ColorProfile::new_from_slice(&data).is_ok();
         let lcms2_ok = lcms2::Profile::new_icc(&data).is_ok();
         let skcms_ok = skcms_sys::parse_icc_profile(&data).is_some();
+        // ArgyllCMS parsability is checked implicitly by the transform
 
         *parse_counts.entry("moxcms").or_insert(0) += moxcms_ok as usize;
         *parse_counts.entry("lcms2").or_insert(0) += lcms2_ok as usize;
@@ -411,6 +495,8 @@ fn brute_force_corpus_parity() {
         pr.lcms2_relcol = lcms2_transform_u16(&data, &ramp, Intent::RelativeColorimetric);
         pr.skcms_perc = skcms_transform_u16(&data, &ramp, Intent::Perceptual);
         pr.skcms_relcol = skcms_transform_u16(&data, &ramp, Intent::RelativeColorimetric);
+        pr.argyll_perc = argyll_transform_u16(&data, &ramp, Intent::Perceptual);
+        pr.argyll_relcol = argyll_transform_u16(&data, &ramp, Intent::RelativeColorimetric);
 
         // Track transform failures
         if moxcms_ok && pr.moxcms_default_perc.is_none() {
@@ -422,13 +508,21 @@ fn brute_force_corpus_parity() {
         if skcms_ok && pr.skcms_perc.is_none() {
             *transform_fail_counts.entry("skcms_perc".into()).or_default() += 1;
         }
+        if pr.argyll_perc.is_none() {
+            *transform_fail_counts.entry("argyll_perc".into()).or_default() += 1;
+        }
+
+        // Count argyll parse successes (any transform worked = parse succeeded)
+        if pr.argyll_perc.is_some() || pr.argyll_relcol.is_some() {
+            *parse_counts.entry("argyll").or_insert(0) += 1;
+        }
 
         results.push(pr);
     }
 
     eprintln!("\n── Parse summary ──");
     for (cms, count) in &parse_counts {
-        eprintln!("  {cms}: {count} RGB profiles parsed");
+        eprintln!("  {cms}: {count} RGB profiles parsed/transformed");
     }
     eprintln!("  Skipped non-RGB: {skipped_non_rgb}");
 
@@ -456,13 +550,19 @@ fn brute_force_corpus_parity() {
 
     writeln!(
         f,
-        "profile\tintent\tmox_def_vs_lcms2\tmox_tet_vs_lcms2\tmox_def_vs_skcms\tmox_tet_vs_skcms\tlcms2_vs_skcms\tmox_def_vs_tet\tmox_def_vs_lcms2_mean\tmox_tet_vs_lcms2_mean\tmox_def_vs_skcms_mean\tmox_tet_vs_skcms_mean\tlcms2_vs_skcms_mean\tmox_def_vs_tet_mean"
+        "profile\tintent\t\
+         mox_def_vs_lcms2\tmox_tet_vs_lcms2\tmox_def_vs_skcms\tmox_tet_vs_skcms\t\
+         lcms2_vs_skcms\tmox_def_vs_tet\t\
+         argyll_vs_lcms2\targyll_vs_skcms\targyll_vs_mox_def\targyll_vs_mox_tet\t\
+         mox_def_vs_lcms2_mean\tmox_tet_vs_lcms2_mean\tmox_def_vs_skcms_mean\tmox_tet_vs_skcms_mean\t\
+         lcms2_vs_skcms_mean\tmox_def_vs_tet_mean\t\
+         argyll_vs_lcms2_mean\targyll_vs_skcms_mean\targyll_vs_mox_def_mean\targyll_vs_mox_tet_mean"
     ).unwrap();
 
     for row in &rows {
         writeln!(
             f,
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             row.filename,
             row.intent,
             fmt_opt_u32(row.mox_def_vs_lcms2),
@@ -471,12 +571,20 @@ fn brute_force_corpus_parity() {
             fmt_opt_u32(row.mox_tet_vs_skcms),
             fmt_opt_u32(row.lcms2_vs_skcms),
             fmt_opt_u32(row.mox_def_vs_tet),
+            fmt_opt_u32(row.argyll_vs_lcms2),
+            fmt_opt_u32(row.argyll_vs_skcms),
+            fmt_opt_u32(row.argyll_vs_mox_def),
+            fmt_opt_u32(row.argyll_vs_mox_tet),
             fmt_opt_f64(row.mox_def_vs_lcms2_mean),
             fmt_opt_f64(row.mox_tet_vs_lcms2_mean),
             fmt_opt_f64(row.mox_def_vs_skcms_mean),
             fmt_opt_f64(row.mox_tet_vs_skcms_mean),
             fmt_opt_f64(row.lcms2_vs_skcms_mean),
             fmt_opt_f64(row.mox_def_vs_tet_mean),
+            fmt_opt_f64(row.argyll_vs_lcms2_mean),
+            fmt_opt_f64(row.argyll_vs_skcms_mean),
+            fmt_opt_f64(row.argyll_vs_mox_def_mean),
+            fmt_opt_f64(row.argyll_vs_mox_tet_mean),
         ).unwrap();
     }
     drop(f);
@@ -489,71 +597,33 @@ fn brute_force_corpus_parity() {
 
         eprintln!("\n══ Intent: {intent} ({} profiles) ══", intent_rows.len());
 
-        // For each comparison pair, compute histogram buckets
-        let pairs: &[(&str, Box<dyn Fn(&&ReportRow) -> Option<u32>>)] = &[
+        let pairs: Vec<(&str, Box<dyn Fn(&&ReportRow) -> Option<u32>>)> = vec![
             ("moxcms_def vs lcms2", Box::new(|r: &&ReportRow| r.mox_def_vs_lcms2)),
             ("moxcms_tet vs lcms2", Box::new(|r: &&ReportRow| r.mox_tet_vs_lcms2)),
             ("moxcms_def vs skcms", Box::new(|r: &&ReportRow| r.mox_def_vs_skcms)),
             ("moxcms_tet vs skcms", Box::new(|r: &&ReportRow| r.mox_tet_vs_skcms)),
             ("lcms2 vs skcms",      Box::new(|r: &&ReportRow| r.lcms2_vs_skcms)),
             ("moxcms_def vs tet",   Box::new(|r: &&ReportRow| r.mox_def_vs_tet)),
+            ("argyll vs lcms2",     Box::new(|r: &&ReportRow| r.argyll_vs_lcms2)),
+            ("argyll vs skcms",     Box::new(|r: &&ReportRow| r.argyll_vs_skcms)),
+            ("argyll vs moxcms_def",Box::new(|r: &&ReportRow| r.argyll_vs_mox_def)),
+            ("argyll vs moxcms_tet",Box::new(|r: &&ReportRow| r.argyll_vs_mox_tet)),
         ];
 
-        for (name, accessor) in pairs {
+        for (name, accessor) in &pairs {
             let vals: Vec<u32> = intent_rows.iter().filter_map(|r| accessor(r)).collect();
-            if vals.is_empty() {
-                eprintln!("  {name}: no data");
-                continue;
-            }
-
-            let n = vals.len();
-            let exact = vals.iter().filter(|&&v| v == 0).count();
-            let le1 = vals.iter().filter(|&&v| v <= 1).count();
-            let le2 = vals.iter().filter(|&&v| v <= 2).count();
-            let le4 = vals.iter().filter(|&&v| v <= 4).count();
-            let le16 = vals.iter().filter(|&&v| v <= 16).count();
-            let le64 = vals.iter().filter(|&&v| v <= 64).count();
-            let le256 = vals.iter().filter(|&&v| v <= 256).count();
-            let le1024 = vals.iter().filter(|&&v| v <= 1024).count();
-            let max = *vals.iter().max().unwrap();
-            let mean: f64 = vals.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-            let median = {
-                let mut sorted = vals.clone();
-                sorted.sort();
-                sorted[sorted.len() / 2]
-            };
-            let p95 = {
-                let mut sorted = vals.clone();
-                sorted.sort();
-                sorted[sorted.len() * 95 / 100]
-            };
-            let p99 = {
-                let mut sorted = vals.clone();
-                sorted.sort();
-                sorted[sorted.len() * 99 / 100]
-            };
-
-            eprintln!(
-                "  {name:<24} n={n:>4}  exact={exact:>4}  ≤1={le1:>4}  ≤2={le2:>4}  ≤4={le4:>4}  ≤16={le16:>4}  ≤64={le64:>4}  ≤256={le256:>4}  ≤1024={le1024:>4}  max={max:>5}  mean={mean:>7.1}  median={median:>5}  p95={p95:>5}  p99={p99:>5}"
-            );
+            print_histogram(name, &vals);
         }
 
-        // Print the worst offenders for each pair
         eprintln!("\n  Top 5 worst per comparison:");
-        for (name, accessor) in pairs {
+        for (name, accessor) in &pairs {
             let mut worst: Vec<(&str, u32)> = intent_rows
                 .iter()
                 .filter_map(|r| accessor(r).map(|v| (r.filename.as_str(), v)))
                 .collect();
             worst.sort_by(|a, b| b.1.cmp(&a.1));
             worst.truncate(5);
-            if worst.is_empty() {
-                continue;
-            }
-            eprintln!("    {name}:");
-            for (fname, diff) in &worst {
-                eprintln!("      {diff:>5} u16  {fname}");
-            }
+            print_worst(name, &worst);
         }
     }
 
@@ -567,6 +637,7 @@ fn brute_force_corpus_parity() {
             ("moxcms_tet", &pr.moxcms_tetra_perc, &pr.moxcms_tetra_relcol),
             ("lcms2", &pr.lcms2_perc, &pr.lcms2_relcol),
             ("skcms", &pr.skcms_perc, &pr.skcms_relcol),
+            ("argyll", &pr.argyll_perc, &pr.argyll_relcol),
         ] {
             let (max, _) = diff_pair(a, b);
             if let Some(d) = max {
