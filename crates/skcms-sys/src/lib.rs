@@ -263,6 +263,33 @@ pub fn parse_icc_profile(data: &[u8]) -> Option<skcms_ICCProfile> {
     }
 }
 
+/// Parse an ICC profile with explicit A2B table priority.
+///
+/// `priority` is a slice of A2B table indices (0=perceptual, 1=relative
+/// colorimetric, 2=saturation). skcms will use the first available table
+/// matching the priority order. This is skcms's mechanism for rendering
+/// intent selection.
+///
+/// Examples:
+/// - `&[0, 1]` — prefer perceptual (default skcms_Parse behavior)
+/// - `&[1, 0]` — prefer relative colorimetric
+pub fn parse_icc_profile_with_priority(data: &[u8], priority: &[i32]) -> Option<skcms_ICCProfile> {
+    unsafe {
+        let mut profile: skcms_ICCProfile = std::mem::zeroed();
+        if skcms_ParseWithA2BPriority(
+            data.as_ptr() as *const c_void,
+            data.len(),
+            priority.as_ptr(),
+            priority.len() as i32,
+            &mut profile,
+        ) {
+            Some(profile)
+        } else {
+            None
+        }
+    }
+}
+
 /// Get the built-in sRGB profile
 pub fn srgb_profile() -> &'static skcms_ICCProfile {
     unsafe { &*skcms_sRGB_profile() }
