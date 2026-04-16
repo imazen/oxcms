@@ -98,10 +98,7 @@ fn walk_icc(dir: &Path, out: &mut Vec<PathBuf>) {
             let path = entry.path();
             if path.is_dir() {
                 walk_icc(&path, out);
-            } else if path
-                .extension()
-                .is_some_and(|e| e == "icc" || e == "icm")
-            {
+            } else if path.extension().is_some_and(|e| e == "icc" || e == "icm") {
                 out.push(path);
             }
         }
@@ -188,9 +185,15 @@ fn lcms2_transform_u16(icc_data: &[u8], ramp: &[u16], intent: Intent) -> Option<
     };
 
     let flags = Flags::NO_OPTIMIZE | Flags::HIGHRES_PRECALC;
-    let xform: Transform<[u16; 3], [u16; 3]> =
-        Transform::new_flags(&src, PixelFormat::RGB_16, &dst, PixelFormat::RGB_16, lcms_intent, flags)
-            .ok()?;
+    let xform: Transform<[u16; 3], [u16; 3]> = Transform::new_flags(
+        &src,
+        PixelFormat::RGB_16,
+        &dst,
+        PixelFormat::RGB_16,
+        lcms_intent,
+        flags,
+    )
+    .ok()?;
 
     let mut out = vec![0u16; ramp.len()];
     let src_px: &[[u16; 3]] = bytemuck::cast_slice(ramp);
@@ -487,10 +490,18 @@ fn brute_force_corpus_parity() {
         };
 
         // Run all transforms
-        pr.moxcms_default_perc = moxcms_transform_u16(&data, &ramp, Intent::Perceptual, Interp::Default);
-        pr.moxcms_default_relcol = moxcms_transform_u16(&data, &ramp, Intent::RelativeColorimetric, Interp::Default);
-        pr.moxcms_tetra_perc = moxcms_transform_u16(&data, &ramp, Intent::Perceptual, Interp::Tetrahedral);
-        pr.moxcms_tetra_relcol = moxcms_transform_u16(&data, &ramp, Intent::RelativeColorimetric, Interp::Tetrahedral);
+        pr.moxcms_default_perc =
+            moxcms_transform_u16(&data, &ramp, Intent::Perceptual, Interp::Default);
+        pr.moxcms_default_relcol =
+            moxcms_transform_u16(&data, &ramp, Intent::RelativeColorimetric, Interp::Default);
+        pr.moxcms_tetra_perc =
+            moxcms_transform_u16(&data, &ramp, Intent::Perceptual, Interp::Tetrahedral);
+        pr.moxcms_tetra_relcol = moxcms_transform_u16(
+            &data,
+            &ramp,
+            Intent::RelativeColorimetric,
+            Interp::Tetrahedral,
+        );
         pr.lcms2_perc = lcms2_transform_u16(&data, &ramp, Intent::Perceptual);
         pr.lcms2_relcol = lcms2_transform_u16(&data, &ramp, Intent::RelativeColorimetric);
         pr.skcms_perc = skcms_transform_u16(&data, &ramp, Intent::Perceptual);
@@ -500,16 +511,24 @@ fn brute_force_corpus_parity() {
 
         // Track transform failures
         if moxcms_ok && pr.moxcms_default_perc.is_none() {
-            *transform_fail_counts.entry("moxcms_perc".into()).or_default() += 1;
+            *transform_fail_counts
+                .entry("moxcms_perc".into())
+                .or_default() += 1;
         }
         if lcms2_ok && pr.lcms2_perc.is_none() {
-            *transform_fail_counts.entry("lcms2_perc".into()).or_default() += 1;
+            *transform_fail_counts
+                .entry("lcms2_perc".into())
+                .or_default() += 1;
         }
         if skcms_ok && pr.skcms_perc.is_none() {
-            *transform_fail_counts.entry("skcms_perc".into()).or_default() += 1;
+            *transform_fail_counts
+                .entry("skcms_perc".into())
+                .or_default() += 1;
         }
         if pr.argyll_perc.is_none() {
-            *transform_fail_counts.entry("argyll_perc".into()).or_default() += 1;
+            *transform_fail_counts
+                .entry("argyll_perc".into())
+                .or_default() += 1;
         }
 
         // Count argyll parse successes (any transform worked = parse succeeded)
@@ -598,16 +617,46 @@ fn brute_force_corpus_parity() {
         eprintln!("\n══ Intent: {intent} ({} profiles) ══", intent_rows.len());
 
         let pairs: Vec<(&str, Box<dyn Fn(&&ReportRow) -> Option<u32>>)> = vec![
-            ("moxcms_def vs lcms2", Box::new(|r: &&ReportRow| r.mox_def_vs_lcms2)),
-            ("moxcms_tet vs lcms2", Box::new(|r: &&ReportRow| r.mox_tet_vs_lcms2)),
-            ("moxcms_def vs skcms", Box::new(|r: &&ReportRow| r.mox_def_vs_skcms)),
-            ("moxcms_tet vs skcms", Box::new(|r: &&ReportRow| r.mox_tet_vs_skcms)),
-            ("lcms2 vs skcms",      Box::new(|r: &&ReportRow| r.lcms2_vs_skcms)),
-            ("moxcms_def vs tet",   Box::new(|r: &&ReportRow| r.mox_def_vs_tet)),
-            ("argyll vs lcms2",     Box::new(|r: &&ReportRow| r.argyll_vs_lcms2)),
-            ("argyll vs skcms",     Box::new(|r: &&ReportRow| r.argyll_vs_skcms)),
-            ("argyll vs moxcms_def",Box::new(|r: &&ReportRow| r.argyll_vs_mox_def)),
-            ("argyll vs moxcms_tet",Box::new(|r: &&ReportRow| r.argyll_vs_mox_tet)),
+            (
+                "moxcms_def vs lcms2",
+                Box::new(|r: &&ReportRow| r.mox_def_vs_lcms2),
+            ),
+            (
+                "moxcms_tet vs lcms2",
+                Box::new(|r: &&ReportRow| r.mox_tet_vs_lcms2),
+            ),
+            (
+                "moxcms_def vs skcms",
+                Box::new(|r: &&ReportRow| r.mox_def_vs_skcms),
+            ),
+            (
+                "moxcms_tet vs skcms",
+                Box::new(|r: &&ReportRow| r.mox_tet_vs_skcms),
+            ),
+            (
+                "lcms2 vs skcms",
+                Box::new(|r: &&ReportRow| r.lcms2_vs_skcms),
+            ),
+            (
+                "moxcms_def vs tet",
+                Box::new(|r: &&ReportRow| r.mox_def_vs_tet),
+            ),
+            (
+                "argyll vs lcms2",
+                Box::new(|r: &&ReportRow| r.argyll_vs_lcms2),
+            ),
+            (
+                "argyll vs skcms",
+                Box::new(|r: &&ReportRow| r.argyll_vs_skcms),
+            ),
+            (
+                "argyll vs moxcms_def",
+                Box::new(|r: &&ReportRow| r.argyll_vs_mox_def),
+            ),
+            (
+                "argyll vs moxcms_tet",
+                Box::new(|r: &&ReportRow| r.argyll_vs_mox_tet),
+            ),
         ];
 
         for (name, accessor) in &pairs {
@@ -633,7 +682,11 @@ fn brute_force_corpus_parity() {
     let mut intent_divergent = 0;
     for pr in &results {
         for (name, a, b) in [
-            ("moxcms_def", &pr.moxcms_default_perc, &pr.moxcms_default_relcol),
+            (
+                "moxcms_def",
+                &pr.moxcms_default_perc,
+                &pr.moxcms_default_relcol,
+            ),
             ("moxcms_tet", &pr.moxcms_tetra_perc, &pr.moxcms_tetra_relcol),
             ("lcms2", &pr.lcms2_perc, &pr.lcms2_relcol),
             ("skcms", &pr.skcms_perc, &pr.skcms_relcol),

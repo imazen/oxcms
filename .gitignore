@@ -21,3 +21,4 @@ comparison_outputs/
 testdata/profiles/*.icc
 testdata/corpus/**/*.icc
 !testdata/.gitkeep
+external/argyllcms/
