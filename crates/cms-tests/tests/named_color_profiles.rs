@@ -157,7 +157,7 @@ fn test_check_existing_profiles_for_named_colors() {
         }
     }
 
-    check_dir(profiles_dir, &mut checked, &mut named_color_profiles);
+    check_dir(&profiles_dir, &mut checked, &mut named_color_profiles);
 
     eprintln!();
     eprintln!("  Checked {} profiles", checked);
@@ -202,7 +202,7 @@ fn test_profile_class_distribution() {
         }
     }
 
-    check_dir(profiles_dir, &mut class_counts);
+    check_dir(&profiles_dir, &mut class_counts);
 
     eprintln!("  Profile classes found:");
     let mut sorted: Vec<_> = class_counts.iter().collect();
