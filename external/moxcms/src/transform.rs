@@ -1218,7 +1218,7 @@ impl ColorProfile {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use rand::Rng;
+    use rand::RngExt;
 
     #[test]
     fn test_transform_rgb8() {
