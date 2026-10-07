@@ -9,4 +9,4 @@ publish = false
 links = "argyll_icc"
 
 [build-dependencies]
-cc = "1"
+cc = "1.6.0"
