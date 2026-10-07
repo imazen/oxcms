@@ -3,8 +3,9 @@
 //! Compares moxcms, lcms2, qcms, and skcms transform performance.
 //! Tests both profile parsing and pixel transforms at various sizes.
 
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use skcms_sys::{skcms_AlphaFormat, skcms_PixelFormat};
+use std::hint::black_box;
 
 const PIXEL_COUNTS: &[usize] = &[1, 16, 256, 4096, 65536, 262144];
 

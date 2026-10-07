@@ -2,8 +2,9 @@
 //!
 //! Benchmarks to identify which SIMD functions benefit from further optimization.
 
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use oxcms_core::simd;
+use std::hint::black_box;
 
 /// sRGB to XYZ matrix (D65 adapted)
 const SRGB_TO_XYZ: [[f64; 3]; 3] = [
