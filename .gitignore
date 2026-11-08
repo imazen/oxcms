@@ -23,3 +23,6 @@ testdata/corpus/**/*.icc
 !testdata/.gitkeep
 external/argyllcms/
 .workongoing
+
+# Python tool bytecode
+__pycache__/
