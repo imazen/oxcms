@@ -81,3 +81,13 @@ This qualifies source CMYK conversion; float CMYK destinations are not covered.
 The Rust probe uses zenpixels' pinned MoxCMS 0.9.2 and Rust LCMS 55b59476,
 not oxcms' older vendored MoxCMS. Existing workspace failures listed in the
 changelog were not reclassified as passing by these independent tools.
+
+## Existing CI blocker reproduced
+
+[PR4 run 42528956731](https://github.com/imazen/oxcms/actions/runs/42528956731)
+fails seven jobs (six test builds and documentation) because the existing
+workflow never fetches `external/argyllcms/icc/icc.c` and `icc.h` before building
+`argyll-sys`. The new verified extraction recipe is explicit test setup; this
+review does not wire or reclassify the historical whole-workspace CI. The
+standalone CMYK matrix and row checks above completed independently. Every
+original failure remains recorded, and no test threshold is weakened.
