@@ -54,6 +54,11 @@ We prefer options 1 or 2. The goal is to improve the Rust color management ecosy
 - All transforms currently delegated to moxcms
 - Additional validation and error handling
 
+For the separately qualified CMYK source path, including Argyll comparisons,
+intent controls and remaining backend limits, see [CMYK qualification](tools/CMYK_ORACLE.md).
+The historical Phase 1 figures above do not supersede current failures listed
+in [CHANGELOG.md](CHANGELOG.md).
+
 ## Quick Start
 
 ```bash

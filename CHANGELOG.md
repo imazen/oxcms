@@ -10,6 +10,10 @@ published yet.
 
 - None.
 
+### Added
+
+- Reproducible CMYK test oracles for C/Rust LCMS, MoxCMS and Argyll, with matched intent controls and native strided-row checks. See [scope and limitations](tools/CMYK_ORACLE.md).
+
 ### Changed
 
 - Dependencies: thiserror 2, rand / rand_chacha 0.10, multiversion 0.8, criterion 0.7; the benches take `black_box` from `std::hint` (2010224). Imprecise floors raised to the resolved versions, all within the 1.89 MSRV (50f812b). Held by the MSRV: criterion 0.8, multiversion 0.9, colorutils-rs 0.8.
