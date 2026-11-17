@@ -1,0 +1,17 @@
+[package]
+name = "oxcms-icc-audit"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Keep this comparison independent of the wrapper's vendored 0.8.0 and
+# cms-tests' Argyll C build. The revision is upstream's default-branch tip
+# checked on 2026-11-17 (the branch is named master).
+[workspace]
+
+[dependencies]
+moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "5fc602b66fefeb40094a4adc7eea965aae0c28ea" }
+oxcms-core = { path = "../../crates/oxcms-core" }
+
+[features]
+extended-range = ["moxcms/extended_range"]

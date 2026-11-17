@@ -1,6 +1,8 @@
 # Rust
 /target/
+tools/icc-audit/target/
 Cargo.lock
+!tools/icc-audit/Cargo.lock
 
 # IDE
 .idea/
