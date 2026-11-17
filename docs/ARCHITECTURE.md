@@ -19,7 +19,7 @@ oxcms is a Rust color management system that aims to combine the best of existin
 oxcms/
 ├── crates/
 │   ├── oxcms-core/          # Thin wrapper over moxcms (to be replaced)
-│   ├── cms-tests/           # 185 parity tests, all passing
+│   ├── cms-tests/           # Cross-CMS tests; known failures in tracking/TEST_STATUS.md
 │   └── skcms-sys/           # FFI bindings to skcms
 ├── external/
 │   └── moxcms/              # Forked moxcms with ARM64 NEON fix
@@ -369,7 +369,7 @@ All parity tests use DeltaE2000:
 | sRGB→P3 1MP | < 2ms | moxcms baseline |
 | ICC parse | < 100μs | moxcms baseline |
 
-We aim to match or exceed moxcms performance, which is already 3x+ faster than lcms2.
+Performance comparisons require committed measurements for the same profiles, options and outputs; no general speed ratio is established here.
 
 ## Security Considerations
 

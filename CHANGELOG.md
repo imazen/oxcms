@@ -12,9 +12,11 @@ published yet.
 
 ### Added
 
-- A revision-pinned upstream moxcms ICC audit, independent of the vendored backend and Argyll build, with C lcms2 probes and a D1–D15 comparison ([findings](docs/ICC_DEVIATIONS.md)). Covers gray white points, curve clipping/inversion, zero-grid LUT output, IDs, legacy descriptions and CICP/metadata round-trip loss.
+- A revision-pinned upstream moxcms ICC audit, independent of the vendored backend and Argyll build, with C lcms2 probes and a D1–D15 comparison ([findings](docs/ICC_DEVIATIONS.md)). Covers gray white points, curve clipping/inversion, zero-grid LUT output, IDs, legacy descriptions and CICP/metadata round-trip loss (9897ef5).
 
 ### Changed
+
+- Validation documentation distinguishes historical parity results from current qualification and links the ICC audit; removes unsupported completeness and performance claims.
 
 - Dependencies: thiserror 2, rand / rand_chacha 0.10, multiversion 0.8, criterion 0.7; the benches take `black_box` from `std::hint` (2010224). Imprecise floors raised to the resolved versions, all within the 1.89 MSRV (50f812b). Held by the MSRV: criterion 0.8, multiversion 0.9, colorutils-rs 0.8.
 - CI: checkout v7, cache v6, upload-artifact v7 (89c5d61).

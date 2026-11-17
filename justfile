@@ -1,3 +1,5 @@
+set tempdir := env("HOME") / "tmp"
+
 # The audit is isolated from cms-tests' external Argyll source requirement.
 icc-audit-check:
     #!/usr/bin/env bash

@@ -1,6 +1,16 @@
 # Test Status Tracking
 
-Last updated: 2025-12-27
+Current qualification note (2026-11-17): the table below is a historical
+2025-12-27 snapshot, **not the current passing count**. CHANGELOG records
+seven failures in the last full run and the missing external Argyll sources
+in CI. That suite was not rerun for the ICC audit.
+
+The separate [ICC deviation audit](../docs/ICC_DEVIATIONS.md) passes its
+default and extended-range probes against pinned upstream moxcms 0.9.2.
+It identifies native oxcms clipping and inverse-plateau issues as well as
+backend metadata loss. Those probes do not certify the full suite.
+
+Historical snapshot: 2025-12-27
 
 ## Summary
 

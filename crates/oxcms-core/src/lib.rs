@@ -1,19 +1,12 @@
 //! # oxcms - Oxidized Color Management System
 //!
-//! A fast, safe, and complete color management system in Rust.
+//! A Rust color-management wrapper with native color and ICC modules.
 //!
-//! ## Goals
-//!
-//! - **Fast**: SIMD-optimized (AVX2, SSE4, NEON) - 3x+ faster than lcms2
-//! - **Safe**: Pure Rust, memory-safe by design
-//! - **Complete**: Full ICC v4.4 support including CMYK, DeviceLink, CIECAM02
-//! - **Tested**: Parity tested against lcms2, skcms, and qcms
-//!
-//! ## Current Status
-//!
-//! This library wraps moxcms and adds additional validation and testing.
-//! The goal is to eventually provide our own implementation that matches
-//! lcms2 output exactly while maintaining moxcms performance.
+//! The top-level profile/transform API delegates to vendored moxcms 0.8.0.
+//! Native curve code is also present; it is not a complete replacement for
+//! that backend. Cross-CMS parity and ICC conformance are separate checks.
+//! Known workspace failures and the comparison with current upstream moxcms
+//! are documented in the repository's CHANGELOG and docs/ICC_DEVIATIONS.md.
 //!
 //! ## Quick Start
 //!

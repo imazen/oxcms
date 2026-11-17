@@ -1,6 +1,6 @@
 # oxcms - Oxidized Color Management System
 
-A fast, safe, and complete color management system in Rust.
+A Rust color-management wrapper and cross-CMS test workspace.
 
 ## Goals
 
@@ -17,14 +17,14 @@ Combine the best of all CMS implementations:
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 1: Test Infrastructure | **Complete** | Parity tests, CI, documentation |
+| Phase 1: Test Infrastructure | Available | Parity tests and documentation; known CI/test failures remain |
 | Phase 2: Core Implementation | In Progress | See "Relationship with moxcms" below |
 | Phase 3: Feature Parity | Planned | CMYK, DeviceLink, advanced features |
 | Phase 4: Beyond lcms2 | Planned | HDR, fuzzing, profile creation |
 
 ### Relationship with moxcms
 
-oxcms currently wraps [moxcms](https://github.com/awxkee/moxcms), an excellent Rust CMS by [@awxkee](https://github.com/awxkee). We're actively contributing bug fixes upstream:
+oxcms currently wraps [moxcms](https://github.com/awxkee/moxcms), an excellent Rust CMS by [Radzivon Bartoshyk](https://github.com/awxkee). We're actively contributing bug fixes upstream:
 
 - [PR #139](https://github.com/awxkee/moxcms/pull/139) - ARM64 NEON register fix
 - [PR #140](https://github.com/awxkee/moxcms/pull/140) - V2 ICC white point handling
@@ -40,10 +40,10 @@ We prefer options 1 or 2. The goal is to improve the Rust color management ecosy
 ### Phase 1 Achievements
 
 - [x] Workspace with oxcms-core, cms-tests, skcms-sys
-- [x] 185 parity tests (all passing)
+- [x] Cross-CMS test infrastructure (known failures: [test status](tracking/TEST_STATUS.md))
 - [x] Cross-CMS comparison (moxcms, lcms2, qcms, skcms)
 - [x] DeltaE2000 accuracy measurement
-- [x] CI on Ubuntu, Windows, macOS (x86_64 + ARM64)
+- [x] CI configuration for Ubuntu, Windows and macOS (see known failures below)
 - [x] ARM64 NEON bug identified and fixed in moxcms fork
 - [x] Math differences documented
 
@@ -51,7 +51,7 @@ We prefer options 1 or 2. The goal is to improve the Rust color management ecosy
 
 `oxcms-core` provides a stable API layer:
 - Clean public types that don't leak moxcms internals
-- All transforms currently delegated to moxcms
+- The top-level wrapper delegates transforms to vendored moxcms 0.8.0; native modules are also present
 - Additional validation and error handling
 
 ## Quick Start
@@ -116,25 +116,26 @@ oxcms/
 - [Math Differences](docs/MATH_DIFFERENCES.md) - CMS comparison results
 - [Test Status](tracking/TEST_STATUS.md) - Current test coverage
 
-## Test Results
+## Validation and limitations
 
-All CMS implementations produce **identical output** for sRGB transforms:
+The full workspace is not all-green. The last recorded full run had seven
+failures (CMYK parity, pure yellow and a grayscale monotonicity case), and
+CI requires external Argyll C sources that its workflow does not fetch.
+See [CHANGELOG](CHANGELOG.md) and [test status](tracking/TEST_STATUS.md).
 
-| Comparison | Max ΔE | Status |
-|------------|--------|--------|
-| moxcms vs lcms2 | 0.0000 | IDENTICAL |
-| moxcms vs qcms | 0.0000 | IDENTICAL |
-| qcms vs lcms2 | 0.0000 | IDENTICAL |
+The [2026-11-17 ICC comparison](docs/ICC_DEVIATIONS.md) tests current
+upstream moxcms 0.9.2 separately from the wrapper's vendored backend.
+It records shared and different behavior for the fifteen lcms2.20 findings,
+including unsupported operations, metadata loss and native oxcms curve issues.
+Passing parity checks does not establish specification conformance.
 
-## Performance Targets
+```bash
+just icc-audit
+just icc-audit-extended
+```
 
-| Operation | Target | Reference |
-|-----------|--------|-----------|
-| sRGB→sRGB 1MP | < 1ms | moxcms baseline |
-| sRGB→P3 1MP | < 2ms | moxcms baseline |
-| ICC parse | < 100μs | moxcms baseline |
-
-Goal: Match or exceed moxcms performance (3x+ faster than lcms2).
+The standalone audit has a pinned upstream revision and lockfile. These
+commands do not require Argyll or certify the ordinary workspace suite.
 
 ## CMS Libraries Compared
 
@@ -147,7 +148,7 @@ Goal: Match or exceed moxcms performance (3x+ faster than lcms2).
 
 ## AI-Generated Code Notice
 
-This project was developed with assistance from Claude (Anthropic). While the code has been tested against multiple reference implementations and passes 185+ tests including cross-CMS parity validation, **not all code has been manually reviewed**.
+This project was developed with assistance from Claude (Anthropic). The code has cross-CMS tests, but **not all code has been manually reviewed**, and known failures remain.
 
 Before using in production:
 - Review critical code paths for your use case
@@ -160,7 +161,7 @@ MIT OR Apache-2.0
 
 ## Sources & Acknowledgments
 
-- [moxcms](https://github.com/awxkee/moxcms) by [@awxkee](https://github.com/awxkee) - Fast Rust CMS we build upon
+- [moxcms](https://github.com/awxkee/moxcms) by [Radzivon Bartoshyk](https://github.com/awxkee) - Fast Rust CMS we build upon
 - [LittleCMS](https://www.littlecms.com/) - Industry standard reference
 - [skcms](https://skia.googlesource.com/skcms/) - Chrome's CMS
 - [qcms](https://github.com/nicholasbishop/qcms-rust) - Firefox's CMS
